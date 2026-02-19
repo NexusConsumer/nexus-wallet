@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AuthMethod } from '../types/auth.types';
+import { firebaseSignOut } from '../services/auth.service';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -20,6 +21,7 @@ interface AuthState {
     organizationName?: string;
     avatarUrl?: string;
   }) => void;
+  setToken: (token: string) => void;
   setAvatarUrl: (url: string | null) => void;
   setMarketingConsent: (consent: boolean) => void;
   setProfileCompleted: (completed: boolean) => void;
@@ -110,6 +112,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
+  setToken: (token) => {
+    set((state) => {
+      const next = { ...state, token };
+      persistAuth(next);
+      return { token };
+    });
+  },
+
   setMarketingConsent: (consent) => {
     set((state) => {
       const next = { ...state, marketingConsent: consent };
@@ -135,6 +145,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    firebaseSignOut().catch(() => {});
     clearPersistedAuth();
     set({
       isAuthenticated: false,

@@ -6,12 +6,12 @@ import { useLoginSheetStore } from '../../stores/loginSheetStore';
 import { useTenantStore } from '../../stores/tenantStore';
 import { useRegistrationStore } from '../../stores/registrationStore';
 import {
-  mockSendOtp,
-  mockVerifyOtp,
-  mockGoogleSignIn,
-  mockAppleSignIn,
-  mockSaveConsent,
-} from '../../mock/handlers/auth.handler';
+  firebaseSendOtp,
+  firebaseVerifyOtp,
+  firebaseGoogleSignIn,
+  firebaseAppleSignIn,
+  firebaseSaveConsent,
+} from '../../services/auth.service';
 import { lookupTenantByOrg } from '../../mock/handlers/tenant.handler';
 
 export default function LoginSheet() {
@@ -174,7 +174,7 @@ export default function LoginSheet() {
     setIsLoading(true);
     setError('');
     try {
-      await mockSendOtp(phone);
+      await firebaseSendOtp(phone);
       setStep('otp');
     } finally {
       setIsLoading(false);
@@ -219,7 +219,7 @@ export default function LoginSheet() {
     setIsLoading(true);
     setError('');
     try {
-      const result = await mockVerifyOtp(phone, code);
+      const result = await firebaseVerifyOtp(phone, code);
       if (!result.success || !result.session) {
         setError(t.auth.wrongCode);
         setOtp(['', '', '', '']);
@@ -240,7 +240,7 @@ export default function LoginSheet() {
         isOrgMember: session.isOrgMember,
         organizationName: orgMember?.organizationName,
       });
-      await mockSaveConsent(session.userId, marketingOptIn);
+      await firebaseSaveConsent(session.userId, marketingOptIn);
       setMarketingConsent(marketingOptIn);
 
       // Load tenant config for org members (so TopBar can show the logo)
@@ -327,7 +327,7 @@ export default function LoginSheet() {
   const handleGoogle = async () => {
     setIsLoading(true);
     try {
-      const result = await mockGoogleSignIn();
+      const result = await firebaseGoogleSignIn();
       if (result.success && result.session) {
         login({
           token: result.session.token,
@@ -336,7 +336,7 @@ export default function LoginSheet() {
           isOrgMember: result.session.isOrgMember,
           avatarUrl: result.profile?.picture,
         });
-        await mockSaveConsent(result.session.userId, marketingOptIn);
+        await firebaseSaveConsent(result.session.userId, marketingOptIn);
         setMarketingConsent(marketingOptIn);
 
         // Returning user (already completed profile before) → go to requested page
@@ -382,7 +382,11 @@ export default function LoginSheet() {
   const handleApple = async () => {
     setIsLoading(true);
     try {
-      const result = await mockAppleSignIn();
+      const result = await firebaseAppleSignIn();
+      if (result.notAvailable) {
+        setError(isHe ? 'התחברות עם Apple תהיה זמינה בקרוב' : 'Apple sign-in coming soon');
+        return;
+      }
       if (result.success && result.session) {
         login({
           token: result.session.token,
@@ -391,7 +395,7 @@ export default function LoginSheet() {
           isOrgMember: result.session.isOrgMember,
           avatarUrl: result.profile?.picture,
         });
-        await mockSaveConsent(result.session.userId, marketingOptIn);
+        await firebaseSaveConsent(result.session.userId, marketingOptIn);
         setMarketingConsent(marketingOptIn);
 
         // Returning user (already completed profile before) → go to requested page
@@ -707,7 +711,7 @@ export default function LoginSheet() {
                 onClick={async () => {
                   setOtp(['', '', '', '']);
                   setError('');
-                  await mockSendOtp(phone);
+                  await firebaseSendOtp(phone);
                   otpRefs[0].current?.focus();
                 }}
                 disabled={isLoading}
@@ -716,10 +720,6 @@ export default function LoginSheet() {
                 {t.auth.resendCode}
               </button>
 
-              {/* Mock hint */}
-              <p className="text-[10px] text-text-muted text-center mt-4 opacity-60">
-                Mock code: 1234
-              </p>
             </div>
           )}
 
@@ -743,6 +743,9 @@ export default function LoginSheet() {
           )}
         </div>
       </div>
+
+      {/* Invisible reCAPTCHA for phone auth */}
+      <div id="recaptcha-container" />
     </>
   );
 }

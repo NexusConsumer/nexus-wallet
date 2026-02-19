@@ -4,7 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useTenantStore } from '../stores/tenantStore';
 import { useRegistrationStore } from '../stores/registrationStore';
 import { useAuthStore } from '../stores/authStore';
-import { mockProcessMembershipFee } from '../mock/handlers/registration.handler';
+import { processMembershipFee } from '../services/registration.service';
 
 export default function RegisterMembershipPage() {
   const { lang = 'he' } = useParams();
@@ -34,7 +34,7 @@ export default function RegisterMembershipPage() {
   const handlePay = async () => {
     setIsLoading(true);
     try {
-      const result = await mockProcessMembershipFee(
+      const result = await processMembershipFee(
         userId ?? '',
         tenantConfig.membershipFeeAmount ?? 0
       );

@@ -5,7 +5,7 @@ import { useRegistrationStore } from '../stores/registrationStore';
 import { useTenantStore } from '../stores/tenantStore';
 import { useAuthStore } from '../stores/authStore';
 import { questionnaireQuestions } from '../mock/data/questionnaire.mock';
-import { mockSavePreferences } from '../mock/handlers/registration.handler';
+import { savePreferences } from '../services/registration.service';
 
 export default function RegisterPreferencesPage() {
   const { lang = 'he' } = useParams();
@@ -29,7 +29,7 @@ export default function RegisterPreferencesPage() {
     setIsSubmitting(true);
     try {
       setPreferences(finalAnswers);
-      await mockSavePreferences(userId ?? '', finalAnswers);
+      await savePreferences(userId ?? '', finalAnswers);
       setProfileCompleted(true);
       completeRegistration();
       navigate(`/${lang}`, { replace: true });

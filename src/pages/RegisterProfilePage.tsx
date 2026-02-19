@@ -4,7 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useRegistrationStore } from '../stores/registrationStore';
 import { useTenantStore } from '../stores/tenantStore';
 import { useAuthStore } from '../stores/authStore';
-import { mockCompleteProfile } from '../mock/handlers/registration.handler';
+import { completeProfile } from '../services/registration.service';
 
 export default function RegisterProfilePage() {
   const { lang = 'he' } = useParams();
@@ -72,7 +72,7 @@ export default function RegisterProfilePage() {
     setIsLoading(true);
 
     try {
-      await mockCompleteProfile(userId ?? '', profileData);
+      await completeProfile(userId ?? '', profileData);
 
       // Mark profile as completed so returning users skip registration
       setProfileCompleted(true);

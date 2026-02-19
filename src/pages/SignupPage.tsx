@@ -5,7 +5,7 @@ import { useRegistrationStore } from '../stores/registrationStore';
 import { useLoginSheetStore } from '../stores/loginSheetStore';
 import { useAuthStore } from '../stores/authStore';
 import { useTenantStore } from '../stores/tenantStore';
-import { mockCompleteProfile } from '../mock/handlers/registration.handler';
+import { completeProfile } from '../services/registration.service';
 
 // Unsplash images — high quality, free, no API key
 const SLIDE_IMAGES = [
@@ -165,7 +165,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await mockCompleteProfile(userId ?? '', profileData);
+      await completeProfile(userId ?? '', profileData);
       setProfileCompleted(true);
 
       const skipQuestionnaire = tenantConfig?.flowOverrides?.skipQuestionnaire;
