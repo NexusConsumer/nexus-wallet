@@ -1,0 +1,199 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #635bff;
+  --color-primary-dark: #5649d8;
+  --color-bg-light: #ffffff;
+  --color-bg-dark: #0a2540;
+  --color-surface: #f6f9fc;
+  --color-text-primary: #0a2540;
+  --color-text-secondary: #425466;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-white: #FFFFFF;
+  --color-accent-cyan: #00d4ff;
+  --color-accent-green: #7dd3a8;
+
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-hebrew: 'Rubik', 'Inter', system-ui, sans-serif;
+
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-fade-up: fade-up 0.4s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-bounce-dot: bounce-dot 1.4s ease-in-out infinite;
+  --animate-slide-fade-in: slide-fade-in 0.5s ease-out forwards;
+  --animate-slide-fade-in-delay: slide-fade-in 0.5s ease-out 0.15s forwards;
+  --animate-drip-in: drip-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-marker-pulse: marker-pulse 2s ease-out infinite;
+  --animate-mic-pulse: mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bounce-dot {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+@keyframes slide-fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Drip animation — like a water droplet forming from the left edge and detaching into a circle */
+@keyframes drip-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px) scaleX(0.2) scaleY(0.5);
+    border-radius: 20% 50% 50% 20%;
+  }
+  25% {
+    opacity: 0.6;
+    transform: translateX(-10px) scaleX(0.45) scaleY(0.7);
+    border-radius: 30% 50% 50% 30%;
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(-4px) scaleX(0.7) scaleY(1.15);
+    border-radius: 40% 50% 50% 40%;
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(2px) scaleX(1.1) scaleY(0.9);
+    border-radius: 50%;
+  }
+  85% {
+    transform: translateX(-1px) scaleX(0.95) scaleY(1.05);
+    border-radius: 50%;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scaleX(1) scaleY(1);
+    border-radius: 50%;
+  }
+}
+
+@keyframes marker-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes sheet-up {
+  from { opacity: 0; transform: translateY(30%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tailwind v4 Preflight (in @layer base) already resets margins, padding, and box-sizing.
+   DO NOT add an unlayered * reset here — unlayered CSS overrides all @layer utilities,
+   which breaks Tailwind classes like px-5, py-4, etc. */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: var(--color-bg-light);
+  color: var(--color-text-primary);
+  min-height: max(884px, 100dvh);
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
+[dir="rtl"] body,
+[dir="rtl"] {
+  font-family: var(--font-hebrew);
+}
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 37, 64, 0.5);
+  z-index: 40;
+  animation: fade-in 0.2s ease-out;
+}
+
+.balance-gradient {
+  background: linear-gradient(135deg, #635bff 0%, #7c6cff 50%, #5649d8 100%);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mb-bottom-nav {
+  margin-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
