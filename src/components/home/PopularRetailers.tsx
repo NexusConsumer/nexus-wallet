@@ -1,4 +1,4 @@
-import React from 'react';
+import {} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { mockBusinesses } from '../../mock/data/businesses.mock';

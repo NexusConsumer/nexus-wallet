@@ -4,12 +4,12 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useRecommendations } from '../../hooks/useRecommendations';
 import Skeleton from '../ui/Skeleton';
 import type { ScoredVoucher } from '../../types/recommendation.types';
-import type { Voucher } from '../../types/voucher.types';
+import type { Voucher as _Voucher } from '../../types/voucher.types';
 
 // ── Info Tooltip ──
 
 function InfoTooltip({
-  isHe,
+  isHe: _isHe,
   text,
   ctaLabel,
   onCta,

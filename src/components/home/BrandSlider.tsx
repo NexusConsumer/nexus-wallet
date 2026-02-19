@@ -57,7 +57,7 @@ function ArrowBubble({ onNavigate }: { onNavigate: () => void }) {
 }
 
 export default function BrandSlider() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { lang = 'he' } = useParams();
   const navigate = useNavigate();
   const isHe = language === 'he';

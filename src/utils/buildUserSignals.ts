@@ -34,9 +34,9 @@ export function buildUserSignals(
   const enrichment = user?.id ? (mockEnrichmentProfiles[user.id] ?? null) : null;
 
   return {
-    spendingFocus: (prefs.spendingFocus ?? prefs.spending_focus ?? null) as SpendingFocus | null,
-    dealPreference: (prefs.dealPreference ?? prefs.deal_preference ?? null) as DealPreference | null,
-    notificationFrequency: (prefs.notificationFrequency ?? prefs.notification_frequency ?? null) as NotificationFrequency | null,
+    spendingFocus: (prefs.spendingFocus ?? (prefs as Record<string, unknown>).spending_focus ?? null) as SpendingFocus | null,
+    dealPreference: (prefs.dealPreference ?? (prefs as Record<string, unknown>).deal_preference ?? null) as DealPreference | null,
+    notificationFrequency: (prefs.notificationFrequency ?? (prefs as Record<string, unknown>).notification_frequency ?? null) as NotificationFrequency | null,
     birthday: null,
     memberSince: user?.createdAt ?? null,
     organizationId: user?.organizationId ?? null,

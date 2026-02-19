@@ -104,7 +104,7 @@ export function useSpeechRecognition({
   language,
   onResult,
 }: UseSpeechRecognitionOptions): UseSpeechRecognitionReturn {
-  const storeRef = useRef<ReturnType<typeof createListeningStore>>();
+  const storeRef = useRef<ReturnType<typeof createListeningStore>>(undefined);
   if (!storeRef.current) {
     storeRef.current = createListeningStore();
   }
