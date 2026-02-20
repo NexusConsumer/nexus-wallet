@@ -136,14 +136,14 @@ function RotatingBlob({ color = "#635bff" }: { color?: string }) {
 }
 
 // ── Card position for each shape pose ──
-// Card must always stay within the visible viewport.
-// Container is max-w-sm (384px) and card is 240px wide,
-// so x must be in range ~[0 .. 140]. y must stay below title (~60) and above bottom (~500).
+// The card is centered horizontally (left:50%, translateX:-50%) as its base.
+// x offsets are small nudges from center (-40..+40px), so card never leaves viewport.
+// y offsets are from the card's base position (top:0 of container).
 const cardOffsets = [
-  { x: 70, y: 200 },  // pose 0: shape centered — card at bottom-right area
-  { x: 10, y: 310 },  // pose 1: shape moved left+down — card center-left
-  { x: 100, y: 140 }, // pose 2: shape moved right+up — card right, higher
-  { x: 20, y: 140 },  // pose 3: shape moved left+up — card left, higher
+  { x: 20, y: 220 },   // pose 0: shape centered — card slightly right, mid area
+  { x: -30, y: 300 },  // pose 1: shape moved left+down — card slightly left, lower
+  { x: 40, y: 160 },   // pose 2: shape moved right+up — card slightly right, higher
+  { x: -40, y: 160 },  // pose 3: shape moved left+up — card slightly left, higher
 ]
 
 function SmartInsightsCarousel() {
@@ -307,11 +307,11 @@ function SmartInsightsCarousel() {
         <RotatingBlob />
       </motion.div>
 
-      {/* ── Card: smaller, follows the shape's rounded corner ── */}
+      {/* ── Card: centered horizontally as base, nudged by x/y offsets ── */}
       <motion.div
         animate={cardControls}
-        className="absolute z-30"
-        style={{ width: CARD_W }}
+        className="absolute z-30 left-1/2"
+        style={{ width: CARD_W, marginLeft: -(CARD_W / 2) }}
       >
         <div className="bg-white rounded-2xl shadow-xl p-5" style={{ width: CARD_W }}>
           {/* Card inner content animates on each slide */}
