@@ -9,16 +9,18 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
+// ── Shape dimensions ──
 const D = 320
 const R = D / 2
 const RECT_H = 90
+
+// ── Card dimensions ──
+const CARD_W = 240
 
 interface Slide {
   title: string
   leftValue: number
   rightValue: number
-  image: string
-  imageBg: string
   shapeColor: string
 }
 
@@ -27,37 +29,29 @@ const slides: Slide[] = [
     title: "הוצאות אוכל בחוץ",
     leftValue: 2434,
     rightValue: 2102,
-    image: "☕",
-    imageBg: "#FDE68A",
-    shapeColor: "#C9D6DF",
+    shapeColor: "#d4d0f6", // light purple (primary family)
   },
   {
     title: "הוצאות ביגוד והנעלה",
     leftValue: 480,
     rightValue: 58,
-    image: "👟",
-    imageBg: "#FBCFE8",
-    shapeColor: "#D8E3DC",
+    shapeColor: "#c7f5d4", // light green (success family)
   },
   {
     title: "הוצאות פיננסיות וביטוחים",
     leftValue: 3200,
     rightValue: 2750,
-    image: "📊",
-    imageBg: "#C7D2FE",
-    shapeColor: "#D6C9F0",
+    shapeColor: "#ddd8fc", // lavender (primary family)
   },
   {
     title: "הוצאות בסופר",
     leftValue: 1800,
     rightValue: 1520,
-    image: "🛒",
-    imageBg: "#BBF7D0",
-    shapeColor: "#F7D046",
+    shapeColor: "#fde68a", // warm yellow accent
   },
 ]
+
 type Pose = { x: number; y: number; rotate: number }
-type BlobPos = { top: number; left: number }
 type Tx = {
   date: string
   merchant: string
@@ -115,7 +109,7 @@ function NexusSemicircleBaseShape({ color }: { color: string }) {
   )
 }
 
-function RotatingBlob({ color = "#6BCB77" }: { color?: string }) {
+function RotatingBlob({ color = "#635bff" }: { color?: string }) {
   return (
     <motion.svg
       width={78}
@@ -123,7 +117,7 @@ function RotatingBlob({ color = "#6BCB77" }: { color?: string }) {
       viewBox="0 0 100 100"
       animate={{ rotate: 360 }}
       transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
-      style={{ display: "block" }}
+      style={{ display: "block", opacity: 0.3 }}
     >
       <path
         d="M50 6
@@ -141,10 +135,21 @@ function RotatingBlob({ color = "#6BCB77" }: { color?: string }) {
   )
 }
 
+// ── Card position for each shape pose ──
+// The card sits at the bottom-right rounded corner of the semicircle shape.
+// Each pose moves the shape, so we offset the card to follow the rounded edge.
+const cardOffsets = [
+  { x: 80, y: 240 },   // pose 0: shape centered
+  { x: -110, y: 410 }, // pose 1: shape moved left+down
+  { x: 230, y: 130 },  // pose 2: shape moved right+up
+  { x: -70, y: 130 },  // pose 3: shape moved left+up
+]
+
 function SmartInsightsCarousel() {
   const [index, setIndex] = useState(0)
   const [visibleTxCount, setVisibleTxCount] = useState(0)
   const shapeControls = useAnimation()
+  const cardControls = useAnimation()
   const slidesLen = slides.length
 
   const safeIndex = useMemo(() => {
@@ -154,7 +159,7 @@ function SmartInsightsCarousel() {
 
   const slide: Slide = slides[safeIndex]
 
-  // Sequential popups only on clothing slide
+  // Sequential popups only on clothing slide (index 1)
   useEffect(() => {
     const timers: Array<ReturnType<typeof setTimeout>> = []
     if (safeIndex === 1) {
@@ -168,33 +173,35 @@ function SmartInsightsCarousel() {
     return () => timers.forEach(clearTimeout)
   }, [safeIndex])
 
-  // Counter + slider
+  // ── Counter + slider (REVERSED direction: right→left) ──
   const amount = useMotionValue(slide.leftValue)
   const formattedAmount = useTransform(amount, (latest) => {
     const v = Math.round(latest)
-    return `${v.toLocaleString()}₪`
+    return `₪${v.toLocaleString()}`
   })
-  const formattedInitial = `${slide.leftValue.toLocaleString()}₪`
+  const formattedInitial = `₪${slide.leftValue.toLocaleString()}`
 
-  const percent = useMotionValue(100)
+  const percent = useMotionValue(0)
   const percentRemaining = useMemo(() => {
     const denom = slide.leftValue
-    if (!Number.isFinite(denom) || denom <= 0) return 0
-    return clamp((slide.rightValue / denom) * 100, 0, 100)
+    if (!Number.isFinite(denom) || denom <= 0) return 100
+    return clamp(100 - (slide.rightValue / denom) * 100, 0, 100)
   }, [slide.leftValue, slide.rightValue])
 
   const SAFE_END_OFFSET_PERCENT = 6
-  const adjustedPercentRemaining = useMemo(() => {
-    return clamp(percentRemaining - SAFE_END_OFFSET_PERCENT, 0, 100)
+  const adjustedPercent = useMemo(() => {
+    return clamp(percentRemaining + SAFE_END_OFFSET_PERCENT, 0, 100)
   }, [percentRemaining])
 
-  const percentCss = useTransform(percent, (p) => `${p}%`)
-  const amountLeftCss = percentCss
+  // The fill goes from right side, so we use "right" percentage
+  const fillWidthCss = useTransform(percent, (p) => `${100 - p}%`)
+  // The moving number position from the right
+  const amountRightCss = useTransform(percent, (p) => `${100 - p}%`)
 
   useEffect(() => {
-    percent.set(100)
+    percent.set(0)
     amount.set(slide.leftValue)
-    const a1 = animate(percent, adjustedPercentRemaining, {
+    const a1 = animate(percent, adjustedPercent, {
       duration: 1.4,
       ease: "easeInOut",
     })
@@ -206,9 +213,9 @@ function SmartInsightsCarousel() {
       a1.stop()
       a2.stop()
     }
-  }, [amount, percent, adjustedPercentRemaining, slide.leftValue, slide.rightValue])
+  }, [amount, percent, adjustedPercent, slide.leftValue, slide.rightValue])
 
-  // Shape movement
+  // ── Shape & card movement ──
   const poses: Pose[] = useMemo(
     () => [
       { x: 0, y: 0, rotate: 0 },
@@ -228,13 +235,27 @@ function SmartInsightsCarousel() {
     const run = async () => {
       try {
         shapeControls.set(initialOffscreen.current)
-        await shapeControls.start({ ...poses[0], transition: { duration: 1 } })
+        cardControls.set({ x: cardOffsets[0].x + 260, y: cardOffsets[0].y + 260, opacity: 0 })
+
+        await Promise.all([
+          shapeControls.start({ ...poses[0], transition: { duration: 1 } }),
+          cardControls.start({ x: cardOffsets[0].x, y: cardOffsets[0].y, opacity: 1, transition: { duration: 1 } }),
+        ])
         phaseRef.current = 0
+
         while (!cancelled) {
           await sleep(2500)
-          setIndex((prev) => (prev + 1) % slidesLen)
           const nextPhase = (phaseRef.current + 1) % poses.length
-          await shapeControls.start({ ...poses[nextPhase], transition: { duration: 1 } })
+          setIndex((prev) => (prev + 1) % slidesLen)
+
+          await Promise.all([
+            shapeControls.start({ ...poses[nextPhase], transition: { duration: 1 } }),
+            cardControls.start({
+              x: cardOffsets[nextPhase].x,
+              y: cardOffsets[nextPhase].y,
+              transition: { duration: 1 },
+            }),
+          ])
           phaseRef.current = nextPhase
         }
       } catch {
@@ -245,28 +266,29 @@ function SmartInsightsCarousel() {
     return () => {
       cancelled = true
     }
-  }, [poses, shapeControls, slidesLen])
+  }, [poses, shapeControls, cardControls, slidesLen])
 
-  const blobPos: BlobPos =
-    safeIndex === 0
-      ? { top: 84, left: 18 }
-      : safeIndex === 1
-        ? { top: 420, left: 262 }
-        : safeIndex === 2
-          ? { top: 118, left: 278 }
-          : { top: 456, left: 36 }
+  const blobPos = useMemo(() => {
+    if (safeIndex === 0) return { top: 84, left: 18 }
+    if (safeIndex === 1) return { top: 420, left: 262 }
+    if (safeIndex === 2) return { top: 118, left: 278 }
+    return { top: 456, left: 36 }
+  }, [safeIndex])
 
   return (
-    <div className="w-full max-w-sm relative">
+    <div className="w-full max-w-sm relative" style={{ minHeight: 600 }}>
+      {/* Title */}
       <motion.h1
         key={`${safeIndex}-title`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-semibold text-[#245C3B] mb-4 text-center"
+        className="text-2xl font-semibold mb-4 text-center"
+        style={{ color: "var(--color-primary)" }}
       >
         נהפוך את ההוצאות שלך להכנסות
       </motion.h1>
 
+      {/* Background shape */}
       <motion.div
         animate={shapeControls}
         initial={initialOffscreen.current}
@@ -276,66 +298,101 @@ function SmartInsightsCarousel() {
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
 
+      {/* Blob */}
       <motion.div className="absolute z-0" style={blobPos}>
         <RotatingBlob />
       </motion.div>
 
-      {/* Card + stack move together */}
+      {/* ── Card: smaller, follows the shape's rounded corner ── */}
       <motion.div
-        animate={{ y: visibleTxCount > 0 ? -visibleTxCount * 55 : 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="relative mt-80 z-30"
+        animate={cardControls}
+        className="absolute z-30"
+        style={{ width: CARD_W }}
       >
-        <div className="bg-white rounded-2xl shadow-xl p-6">
-          <h2 className="text-center font-semibold text-[#2B2B2B] mb-6">{slide.title}</h2>
-          <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-            <motion.div style={{ width: percentCss }} className="h-full bg-green-500 rounded-full" />
-          </div>
-          <div className="relative w-full h-8 overflow-hidden">
-            {/* Moving remaining amount (follows slider edge) */}
+        <div className="bg-white rounded-2xl shadow-xl p-5" style={{ width: CARD_W }}>
+          {/* Card inner content animates on each slide */}
+          <AnimatePresence mode="wait">
             <motion.div
-              style={{ left: amountLeftCss }}
-              className="absolute -translate-x-full text-[11px] font-semibold text-green-600 whitespace-nowrap"
+              key={safeIndex}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
             >
-              {formattedAmount}
+              <h2
+                className="text-center font-semibold text-sm mb-4"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {slide.title}
+              </h2>
+
+              {/* Slider — RTL: fills from right to left */}
+              <div
+                className="w-full h-3 rounded-full overflow-hidden"
+                style={{ backgroundColor: "var(--color-border)" }}
+              >
+                <motion.div
+                  style={{ width: fillWidthCss, marginLeft: "auto", backgroundColor: "var(--color-primary)" }}
+                  className="h-full rounded-full"
+                  layout
+                  transition={{ duration: 0.1 }}
+                />
+              </div>
+
+              {/* Numbers below slider */}
+              <div className="relative w-full h-7 mt-1">
+                {/* Moving "saved" amount — follows slider edge from the right */}
+                <motion.div
+                  style={{ right: amountRightCss, color: "var(--color-primary)" }}
+                  className="absolute translate-x-full text-[11px] font-bold whitespace-nowrap"
+                >
+                  {formattedAmount}
+                </motion.div>
+                {/* Static original value on the left */}
+                <div
+                  className="absolute left-0 pl-1 text-[11px] font-semibold whitespace-nowrap"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  {formattedInitial}
+                </div>
+              </div>
             </motion.div>
-            {/* Static initial high value at end of scale */}
-            <div className="absolute right-0 pr-1 text-xs font-semibold text-gray-400 whitespace-nowrap text-right">
-              {formattedInitial}
-            </div>
-          </div>
+          </AnimatePresence>
         </div>
 
-        {/* Transaction Stack */}
+        {/* Transaction Stack (clothing slide only) */}
         <AnimatePresence>
           {safeIndex === 1 && visibleTxCount > 0 && (
-            <div className="mt-3 space-y-3">
+            <div className="mt-2 space-y-2">
               {clothingTxs.slice(0, visibleTxCount).map((tx) => (
                 <motion.div
                   key={tx.merchant}
-                  initial={{ y: 28, opacity: 0 }}
+                  initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.35, ease: "easeOut" }}
-                  className="bg-white rounded-2xl shadow-xl p-4 border border-gray-100"
+                  className="bg-white rounded-xl shadow-lg p-3"
+                  style={{ borderColor: "var(--color-border)", borderWidth: 1 }}
                 >
-                  <div className="text-xs text-gray-500 mb-2">{tx.date}</div>
-                  <div className="flex justify-between items-center text-sm font-medium">
-                    <span>{tx.merchant}</span>
-                    <span className="text-green-600">+{tx.cashback}₪</span>
+                  <div className="text-[10px] mb-1" style={{ color: "var(--color-text-muted)" }}>
+                    {tx.date}
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mt-3">
+                  <div className="flex justify-between items-center text-xs font-medium">
+                    <span style={{ color: "var(--color-text-primary)" }}>{tx.merchant}</span>
+                    <span style={{ color: "var(--color-success)" }}>+₪{tx.cashback}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-[10px] mt-2" style={{ color: "var(--color-text-muted)" }}>
                     <div>
                       <div>סכום עסקה</div>
-                      <div className="font-semibold text-gray-700">{tx.original}₪</div>
+                      <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.original}</div>
                     </div>
                     <div>
                       <div>שולם בפועל</div>
-                      <div className="font-semibold text-gray-700">{tx.paid}₪</div>
+                      <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.paid}</div>
                     </div>
                     <div>
                       <div>החזר</div>
-                      <div className="font-semibold text-green-600">{tx.cashback}₪</div>
+                      <div className="font-semibold" style={{ color: "var(--color-success)" }}>₪{tx.cashback}</div>
                     </div>
                   </div>
                 </motion.div>
@@ -353,13 +410,17 @@ export default function InsightsPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-dvh bg-[#F3F1E8] flex flex-col items-center justify-center px-6 relative" dir="rtl">
+    <div
+      className="min-h-dvh flex flex-col items-center justify-center px-6 relative overflow-hidden"
+      style={{ backgroundColor: "var(--color-surface)" }}
+      dir="rtl"
+    >
       {/* Back button */}
       <button
         onClick={() => navigate(`/${lang}`)}
         className="absolute top-6 right-6 z-50 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center shadow-sm"
       >
-        <span className="material-symbols-outlined text-[#2B2B2B]" style={{ fontSize: '22px' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '22px', color: "var(--color-text-primary)" }}>
           arrow_forward
         </span>
       </button>
