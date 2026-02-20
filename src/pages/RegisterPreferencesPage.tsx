@@ -206,9 +206,15 @@ export default function RegisterPreferencesPage() {
         )}
 
         {/* Powered by Nexus */}
-        <p className="text-[10px] text-text-muted/50 text-center mt-2">
-          Powered by <span className="font-semibold">Nexus</span>
-        </p>
+        <a
+          href="https://www.nexuswallet.info/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-px mt-4 mb-2"
+        >
+          <img src={`/nexus-logo-animated-black.gif?t=${Date.now()}`} alt="Nexus" className="h-6" />
+          <span className="text-[9px] text-black">Powered by</span>
+        </a>
       </div>
     </div>
   );

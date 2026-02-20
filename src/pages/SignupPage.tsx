@@ -351,31 +351,41 @@ export default function SignupPage() {
         {/* ═══════════════════════════════════════════ */}
         {showForm && (
           <div className="animate-fade-in">
-            {/* Title */}
-            <div className="text-center mb-4">
-              <h1 className="text-xl font-bold text-text-primary mb-1">
-                {t.registration.profileTitle}
-              </h1>
-              <p className="text-sm text-text-muted">
-                {t.registration.profileSubtitle}
-              </p>
-            </div>
+            {/* Title / Greeting */}
+            {authMethod === 'google' ? (
+              <div className="text-center mb-5">
+                <h1 className="text-xl font-bold text-text-primary mb-2">
+                  {t.registration.googleGreeting.replace('{name}', profileData.firstName || '')}
+                </h1>
+              </div>
+            ) : (
+              <>
+                <div className="text-center mb-4">
+                  <h1 className="text-xl font-bold text-text-primary mb-1">
+                    {t.registration.profileTitle}
+                  </h1>
+                  <p className="text-sm text-text-muted">
+                    {t.registration.profileSubtitle}
+                  </p>
+                </div>
 
-            {/* Verified auth method badge */}
-            <div className="mb-4 px-4 py-3 bg-success/5 rounded-2xl border border-success/20 flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-success"
-                style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
-              <span className="text-sm font-medium text-success">
-                {authMethod === 'phone' ? t.registration.phoneConnected : t.registration.googleConnected}
-                {authMethod === 'phone' && regPhone && (
-                  <span className="font-bold ms-1" dir="ltr">{regPhone}</span>
-                )}
-              </span>
-            </div>
+                {/* Verified phone badge */}
+                <div className="mb-4 px-4 py-3 bg-success/5 rounded-2xl border border-success/20 flex items-center gap-3">
+                  <span
+                    className="material-symbols-outlined text-success"
+                    style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}
+                  >
+                    check_circle
+                  </span>
+                  <span className="text-sm font-medium text-success">
+                    {t.registration.phoneConnected}
+                    {regPhone && (
+                      <span className="font-bold ms-1" dir="ltr">{regPhone}</span>
+                    )}
+                  </span>
+                </div>
+              </>
+            )}
 
             {/* "Fill with Google" button — shown for phone auth (has multiple fields to fill) */}
             {authMethod === 'phone' && !googleFilled && (
@@ -561,9 +571,15 @@ export default function SignupPage() {
                 )}
               </button>
 
-              <p className="text-[10px] text-text-muted/50 text-center mt-4">
-                Powered by <span className="font-semibold">Nexus</span>
-              </p>
+              <a
+                href="https://www.nexuswallet.info/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-px mt-6 mb-2"
+              >
+                <img src={`/nexus-logo-animated-black.gif?t=${Date.now()}`} alt="Nexus" className="h-6" />
+                <span className="text-[9px] text-black">Powered by</span>
+              </a>
             </div>
           </div>
         )}

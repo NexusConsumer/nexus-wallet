@@ -37,6 +37,7 @@ export const registrationTranslations = {
     addPhoneNumber: 'Add phone number',
     phoneConnected: 'Phone verified',
     googleConnected: 'Connected with Google',
+    googleGreeting: 'Hi {name}, let\'s get to know each other so we can find you the best deals',
 
     // Progress
     stepOf: 'Step {current} of {total}',
@@ -79,6 +80,7 @@ export const registrationTranslations = {
     addPhoneNumber: 'הוספת מספר טלפון',
     phoneConnected: 'טלפון מאומת',
     googleConnected: 'מחובר עם גוגל',
+    googleGreeting: 'שלום {name}, בוא נכיר כדי שנוכל לדאוג לך להטבות הכי שוות',
 
     // Progress
     stepOf: 'שלב {current} מתוך {total}',
