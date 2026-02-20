@@ -146,6 +146,14 @@ const cardOffsets = [
   { x: -40, y: 160 },  // pose 3: shape moved left+up — card slightly left, higher
 ]
 
+// ── Image overlay per slide — positioned on opposite side from card ──
+const slideOverlays = [
+  { src: "/coffee.png",      style: { top: 120, left: 8 } as const,  initRotate: -15, endRotate: 6 },   // 0: card right → image left
+  { src: "/shoe.png",        style: { top: 120, right: 8 } as const, initRotate: 15,  endRotate: -8 },  // 1: card left  → image right
+  { src: "/calculator.png",  style: { top: 120, left: 8 } as const,  initRotate: -10, endRotate: 5 },   // 2: card right → image left
+  { src: "/avocado.png",     style: { top: 120, right: 8 } as const, initRotate: -20, endRotate: 12 },  // 3: card left  → image right
+]
+
 function SmartInsightsCarousel() {
   const [index, setIndex] = useState(0)
   const [visibleTxCount, setVisibleTxCount] = useState(0)
@@ -304,44 +312,23 @@ function SmartInsightsCarousel() {
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
 
-      {/* Image overlays — sit on top of the background shape at a corner */}
-      <AnimatePresence>
-        {/* Shoe overlay — clothing slide (index 1) */}
-        {safeIndex === 1 && (
-          <motion.div
-            key="shoe"
-            initial={{ opacity: 0, scale: 0.4, rotate: 15 }}
-            animate={{ opacity: 1, scale: 1, rotate: -8 }}
-            exit={{ opacity: 0, scale: 0.4 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="absolute z-[5]"
-            style={{ top: 120, left: 8 }}
-          >
-            <img
-              src="/shoe.png"
-              alt=""
-              style={{ width: 140, height: 'auto', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.18))' }}
-            />
-          </motion.div>
-        )}
-        {/* Avocado overlay — supermarket slide (index 3) */}
-        {safeIndex === 3 && (
-          <motion.div
-            key="avocado"
-            initial={{ opacity: 0, scale: 0.4, rotate: -20 }}
-            animate={{ opacity: 1, scale: 1, rotate: 12 }}
-            exit={{ opacity: 0, scale: 0.4 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="absolute z-[5]"
-            style={{ top: 110, right: 8 }}
-          >
-            <img
-              src="/avocado.png"
-              alt=""
-              style={{ width: 160, height: 'auto', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.18))' }}
-            />
-          </motion.div>
-        )}
+      {/* Image overlay — one per slide, on opposite side from card */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`overlay-${safeIndex}`}
+          initial={{ opacity: 0, scale: 0.4, rotate: slideOverlays[safeIndex].initRotate }}
+          animate={{ opacity: 1, scale: 1, rotate: slideOverlays[safeIndex].endRotate }}
+          exit={{ opacity: 0, scale: 0.4 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="absolute z-[5]"
+          style={slideOverlays[safeIndex].style}
+        >
+          <img
+            src={slideOverlays[safeIndex].src}
+            alt=""
+            style={{ width: 180, height: 'auto', filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' }}
+          />
+        </motion.div>
       </AnimatePresence>
 
       {/* Blob */}
