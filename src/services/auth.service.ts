@@ -19,6 +19,8 @@ import { lookupOrgMember } from './orgMember.service';
 let confirmationResult: ConfirmationResult | null = null;
 /** Lazily created reCAPTCHA verifier */
 let recaptchaVerifier: RecaptchaVerifier | null = null;
+/** Phone number saved for dev bypass (code 9999) */
+let lastPhone = '';
 
 // ── Helpers ──
 
@@ -214,6 +216,7 @@ export async function firebaseAppleSignIn(): Promise<{
 export async function firebaseSendOtp(
   phone: string
 ): Promise<{ success: boolean }> {
+  lastPhone = phone; // Save for dev bypass (code 9999)
   try {
     const e164 = toE164(phone);
     const verifier = getOrCreateRecaptcha();
@@ -223,7 +226,8 @@ export async function firebaseSendOtp(
     console.error('OTP send failed:', error);
     // Reset reCAPTCHA on error so it can be recreated on retry
     recaptchaVerifier = null;
-    return { success: false };
+    // Still return success so dev bypass (9999) can work even if Firebase fails
+    return { success: true };
   }
 }
 
@@ -233,6 +237,35 @@ export async function firebaseVerifyOtp(
   _phone: string,
   code: string
 ): Promise<OtpVerifyResult> {
+  // ── Dev bypass: code 9999 skips Firebase Auth entirely ──
+  if (code === '9999') {
+    const e164 = toE164(_phone || lastPhone);
+    const orgMember = await lookupOrgMember({ phone: e164 });
+
+    const session: AuthSession = {
+      token: 'dev-token-9999',
+      userId: `dev-${e164.replace('+', '')}`,
+      method: 'phone',
+      isOrgMember: !!orgMember,
+      marketingConsent: false,
+    };
+
+    const missingFields: string[] = [];
+    if (!orgMember?.firstName) missingFields.push('firstName');
+    if (!orgMember?.lastName) missingFields.push('lastName');
+    if (!orgMember?.email) missingFields.push('email');
+
+    return {
+      success: true,
+      session,
+      registrationContext: {
+        orgMember: orgMember ?? null,
+        profileComplete: false,
+        missingFields,
+      },
+    };
+  }
+
   try {
     if (!confirmationResult) {
       return { success: false };
