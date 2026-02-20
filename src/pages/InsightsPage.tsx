@@ -304,22 +304,41 @@ function SmartInsightsCarousel() {
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
 
-      {/* Avocado overlay — only on supermarket slide (index 3) */}
+      {/* Image overlays — sit on top of the background shape at a corner */}
       <AnimatePresence>
+        {/* Shoe overlay — clothing slide (index 1) */}
+        {safeIndex === 1 && (
+          <motion.div
+            key="shoe"
+            initial={{ opacity: 0, scale: 0.4, rotate: 15 }}
+            animate={{ opacity: 1, scale: 1, rotate: -8 }}
+            exit={{ opacity: 0, scale: 0.4 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="absolute z-[5]"
+            style={{ top: 120, left: 8 }}
+          >
+            <img
+              src="/shoe.png"
+              alt=""
+              style={{ width: 140, height: 'auto', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.18))' }}
+            />
+          </motion.div>
+        )}
+        {/* Avocado overlay — supermarket slide (index 3) */}
         {safeIndex === 3 && (
           <motion.div
             key="avocado"
-            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+            initial={{ opacity: 0, scale: 0.4, rotate: -20 }}
             animate={{ opacity: 1, scale: 1, rotate: 12 }}
-            exit={{ opacity: 0, scale: 0.5 }}
+            exit={{ opacity: 0, scale: 0.4 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="absolute z-[5]"
-            style={{ top: 100, right: 4 }}
+            style={{ top: 110, right: 8 }}
           >
             <img
               src="/avocado.png"
               alt=""
-              style={{ width: 120, height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
+              style={{ width: 160, height: 'auto', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.18))' }}
             />
           </motion.div>
         )}
