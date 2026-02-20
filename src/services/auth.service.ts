@@ -4,8 +4,10 @@ import {
   RecaptchaVerifier,
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
   signInWithPhoneNumber,
   type ConfirmationResult,
+  type UserCredential,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import type { AuthSession, OtpVerifyResult } from '../types/auth.types';
@@ -37,7 +39,7 @@ function getOrCreateRecaptcha(): RecaptchaVerifier {
 
 // ── Google Sign-In ──
 
-export async function firebaseGoogleSignIn(): Promise<{
+type GoogleSignInResult = {
   success: boolean;
   session?: AuthSession;
   profile?: {
@@ -46,50 +48,76 @@ export async function firebaseGoogleSignIn(): Promise<{
     lastName: string;
     picture: string;
   };
-}> {
+  redirecting?: boolean;
+};
+
+function buildGoogleResult(credential: UserCredential): GoogleSignInResult {
+  const user = credential.user;
+  const nameParts = (user.displayName || '').split(' ');
+  return {
+    success: true,
+    session: {
+      token: '', // will be set by caller via getIdToken()
+      userId: user.uid,
+      method: 'google',
+      isOrgMember: false,
+      marketingConsent: false,
+    },
+    profile: {
+      email: user.email || '',
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      picture: user.photoURL || '',
+    },
+  };
+}
+
+export async function firebaseGoogleSignIn(): Promise<GoogleSignInResult> {
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('profile');
     provider.addScope('email');
 
-    let result;
+    let result: UserCredential;
     try {
       result = await signInWithPopup(auth, provider);
     } catch (err: unknown) {
-      const firebaseErr = err as { code?: string };
-      if (firebaseErr.code === 'auth/popup-blocked') {
-        // Fallback for mobile browsers that block popups
-        await signInWithRedirect(auth, provider);
-        return { success: false }; // redirect will handle result on return
+      const firebaseErr = err as { code?: string; message?: string };
+      console.warn('Popup sign-in failed, falling back to redirect:', firebaseErr.code, firebaseErr.message);
+
+      if (firebaseErr.code === 'auth/popup-closed-by-user' ||
+          firebaseErr.code === 'auth/cancelled-popup-request') {
+        // User cancelled — don't redirect
+        return { success: false };
       }
-      throw err;
+
+      // For any other error (popup-blocked, unauthorized-domain, etc.) → redirect
+      await signInWithRedirect(auth, provider);
+      return { success: false, redirecting: true };
     }
 
-    const user = result.user;
-    const idToken = await user.getIdToken();
-
-    const nameParts = (user.displayName || '').split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-
-    return {
-      success: true,
-      session: {
-        token: idToken,
-        userId: user.uid,
-        method: 'google',
-        isOrgMember: false,
-        marketingConsent: false,
-      },
-      profile: {
-        email: user.email || '',
-        firstName,
-        lastName,
-        picture: user.photoURL || '',
-      },
-    };
+    const idToken = await result.user.getIdToken();
+    const res = buildGoogleResult(result);
+    res.session!.token = idToken;
+    return res;
   } catch (error) {
     console.error('Google sign-in failed:', error);
+    return { success: false };
+  }
+}
+
+/** Call on app startup to handle redirect result (if user was redirected for OAuth) */
+export async function handleGoogleRedirectResult(): Promise<GoogleSignInResult> {
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) return { success: false };
+
+    const idToken = await result.user.getIdToken();
+    const res = buildGoogleResult(result);
+    res.session!.token = idToken;
+    return res;
+  } catch (error) {
+    console.error('Google redirect result failed:', error);
     return { success: false };
   }
 }
