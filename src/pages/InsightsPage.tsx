@@ -274,23 +274,14 @@ function SmartInsightsCarousel() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="text-xs mt-2"
-          style={{ color: "var(--color-text-muted)" }}
+          className="text-sm mt-2 font-semibold"
+          style={{ color: "var(--color-primary)" }}
         >
-          עם עד 60% קאשבק . צבור בלי הגבלה לנקסוס שלך
-        </motion.p>
-        {/* Running balance */}
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            יתרה שנצברה:
-          </span>
-          <motion.span
-            className="text-lg font-bold"
-            style={{ color: "var(--color-success)" }}
-          >
+          עם עד 60% קאשבק . צבור בלי הגבלה לנקסוס שלך:{" "}
+          <motion.span className="font-bold">
             {formattedBalance}
           </motion.span>
-        </div>
+        </motion.p>
       </div>
 
       {/* Background shape */}
