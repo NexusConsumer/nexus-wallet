@@ -189,9 +189,11 @@ function SmartInsightsCarousel() {
     return clamp(100 - (slide.rightValue / denom) * 100, 0, 100)
   }, [slide.leftValue, slide.rightValue])
 
-  const SAFE_END_OFFSET_PERCENT = 6
+  // Keep a gap so the animated number never overlaps the static original on the left.
+  // Cap the slider fill so it stops well before reaching the left edge.
+  const MAX_FILL_PERCENT = 65
   const adjustedPercent = useMemo(() => {
-    return clamp(percentRemaining + SAFE_END_OFFSET_PERCENT, 0, 100)
+    return clamp(percentRemaining, 0, MAX_FILL_PERCENT)
   }, [percentRemaining])
 
   // The fill goes from right side, so we use "right" percentage
@@ -301,6 +303,27 @@ function SmartInsightsCarousel() {
       >
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
+
+      {/* Avocado overlay — only on supermarket slide (index 3) */}
+      <AnimatePresence>
+        {safeIndex === 3 && (
+          <motion.div
+            key="avocado"
+            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+            animate={{ opacity: 1, scale: 1, rotate: 12 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="absolute z-[5]"
+            style={{ top: 100, right: 4 }}
+          >
+            <img
+              src="/avocado.png"
+              alt=""
+              style={{ width: 120, height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Blob */}
       <motion.div className="absolute z-0" style={blobPos}>
