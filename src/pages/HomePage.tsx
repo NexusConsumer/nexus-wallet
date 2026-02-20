@@ -91,10 +91,10 @@ export default function HomePage() {
           איפוס שיתוף מיקום (Dev)
         </button>
         <button
-          onClick={() => navigate(`/${lang}/insights`)}
+          onClick={() => navigate(`/${lang}/stories`)}
           className="w-full py-3 rounded-2xl bg-purple-500/10 text-purple-600 text-xs font-semibold border border-purple-500/20 active:scale-[0.98] transition-all"
         >
-          Smart Insights (Dev)
+          Smart Stories (Dev)
         </button>
       </div>
     </div>

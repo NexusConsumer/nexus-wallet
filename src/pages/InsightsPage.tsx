@@ -139,7 +139,7 @@ if (typeof window !== "undefined") {
   slideOverlays.forEach(({ src }) => { const i = new Image(); i.src = src })
 }
 
-function SmartInsightsCarousel() {
+export function SmartInsightsCarousel() {
   const [index, setIndex] = useState(0)
   const [visibleTxCount, setVisibleTxCount] = useState(0)
   const shapeControls = useAnimation()
