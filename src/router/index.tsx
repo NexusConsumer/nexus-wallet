@@ -16,6 +16,7 @@ import RegisterMembershipPage from '../pages/RegisterMembershipPage';
 import RegisterPreferencesPage from '../pages/RegisterPreferencesPage';
 import SignupPage from '../pages/SignupPage';
 import NearYouMapPage from '../pages/NearYouMapPage';
+import InsightsPage from '../pages/InsightsPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: 'search', element: <SearchPage /> },
       { path: 'chat', element: <AiChatPage /> },
       { path: 'near-you-map', element: <NearYouMapPage /> },
+      { path: 'insights', element: <InsightsPage /> },
       { path: 'signup', element: <SignupPage /> },
 
       // Registration flow (outside AppLayout, full-page)

@@ -1,3 +1,4 @@
+import { useNavigate, useParams } from 'react-router-dom';
 import HeroBanner from '../components/home/HeroBanner';
 import BrandSlider from '../components/home/BrandSlider';
 import ActiveOffers from '../components/home/ActiveOffers';
@@ -8,6 +9,8 @@ import { useTenantStore } from '../stores/tenantStore';
 import { useGeolocationStore } from '../stores/geolocationStore';
 
 export default function HomePage() {
+  const { lang = 'he' } = useParams();
+  const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const login = useAuthStore((s) => s.login);
   const logout = useAuthStore((s) => s.logout);
@@ -86,6 +89,12 @@ export default function HomePage() {
           className="w-full py-3 rounded-2xl bg-amber-500/10 text-amber-600 text-xs font-semibold border border-amber-500/20 active:scale-[0.98] transition-all"
         >
           איפוס שיתוף מיקום (Dev)
+        </button>
+        <button
+          onClick={() => navigate(`/${lang}/insights`)}
+          className="w-full py-3 rounded-2xl bg-purple-500/10 text-purple-600 text-xs font-semibold border border-purple-500/20 active:scale-[0.98] transition-all"
+        >
+          Smart Insights (Dev)
         </button>
       </div>
     </div>
