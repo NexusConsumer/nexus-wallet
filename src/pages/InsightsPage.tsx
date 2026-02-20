@@ -136,13 +136,14 @@ function RotatingBlob({ color = "#635bff" }: { color?: string }) {
 }
 
 // ── Card position for each shape pose ──
-// The card sits at the bottom-right rounded corner of the semicircle shape.
-// Each pose moves the shape, so we offset the card to follow the rounded edge.
+// Card must always stay within the visible viewport.
+// Container is max-w-sm (384px) and card is 240px wide,
+// so x must be in range ~[0 .. 140]. y must stay below title (~60) and above bottom (~500).
 const cardOffsets = [
-  { x: 80, y: 240 },   // pose 0: shape centered
-  { x: -110, y: 410 }, // pose 1: shape moved left+down
-  { x: 230, y: 130 },  // pose 2: shape moved right+up
-  { x: -70, y: 130 },  // pose 3: shape moved left+up
+  { x: 70, y: 200 },  // pose 0: shape centered — card at bottom-right area
+  { x: 10, y: 310 },  // pose 1: shape moved left+down — card center-left
+  { x: 100, y: 140 }, // pose 2: shape moved right+up — card right, higher
+  { x: 20, y: 140 },  // pose 3: shape moved left+up — card left, higher
 ]
 
 function SmartInsightsCarousel() {
@@ -216,12 +217,15 @@ function SmartInsightsCarousel() {
   }, [amount, percent, adjustedPercent, slide.leftValue, slide.rightValue])
 
   // ── Shape & card movement ──
+  // Shape poses — shapes may go partially off-screen, but must not cover the title.
+  // Shape starts at top:150 (centered). Title ends ~60px from top.
+  // So y can go down to about -60 before the shape top reaches the title.
   const poses: Pose[] = useMemo(
     () => [
       { x: 0, y: 0, rotate: 0 },
-      { x: -190, y: 170, rotate: 135 },
-      { x: 150, y: -110, rotate: 45 },
-      { x: -150, y: -110, rotate: -45 },
+      { x: -190, y: 140, rotate: 135 },
+      { x: 150, y: -50, rotate: 45 },
+      { x: -150, y: -50, rotate: -45 },
     ],
     []
   )
@@ -270,19 +274,19 @@ function SmartInsightsCarousel() {
 
   const blobPos = useMemo(() => {
     if (safeIndex === 0) return { top: 84, left: 18 }
-    if (safeIndex === 1) return { top: 420, left: 262 }
-    if (safeIndex === 2) return { top: 118, left: 278 }
-    return { top: 456, left: 36 }
+    if (safeIndex === 1) return { top: 360, left: 262 }
+    if (safeIndex === 2) return { top: 100, left: 278 }
+    return { top: 100, left: 36 }
   }, [safeIndex])
 
   return (
     <div className="w-full max-w-sm relative" style={{ minHeight: 600 }}>
-      {/* Title */}
+      {/* Title — z-10 so background shapes never cover it */}
       <motion.h1
         key={`${safeIndex}-title`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-semibold mb-4 text-center"
+        className="text-2xl font-semibold mb-4 text-center relative z-10"
         style={{ color: "var(--color-primary)" }}
       >
         נהפוך את ההוצאות שלך להכנסות
