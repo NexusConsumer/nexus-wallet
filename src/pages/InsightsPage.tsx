@@ -260,29 +260,23 @@ function SmartInsightsCarousel() {
 
   return (
     <div className="w-full max-w-sm relative" style={{ minHeight: 600 }}>
-      {/* Title + subtitle — z-10 so background shapes never cover them */}
-      <div className="relative z-10 text-center mb-6">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-2xl font-semibold"
-          style={{ color: "var(--color-primary)" }}
+      {/* Title — z-10 so background shapes never cover it, right-aligned */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 text-right mb-6 text-2xl font-semibold leading-relaxed"
+        style={{ color: "var(--color-primary)" }}
+      >
+        נהפוך את ההוצאות שלך להכנסות עם עד 60% קאשבק. צבור בלי הגבלה לנקסוס שלך:{" "}
+        <motion.span
+          key={balanceTarget.current}
+          animate={{ x: [0, -3, 3, -2, 2, 0] }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="inline-block font-bold"
         >
-          נהפוך את ההוצאות שלך להכנסות
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="text-sm mt-2 font-semibold"
-          style={{ color: "var(--color-primary)" }}
-        >
-          עם עד 60% קאשבק . צבור בלי הגבלה לנקסוס שלך:{" "}
-          <motion.span className="font-bold">
-            {formattedBalance}
-          </motion.span>
-        </motion.p>
-      </div>
+          {formattedBalance}
+        </motion.span>
+      </motion.div>
 
       {/* Background shape */}
       <motion.div
