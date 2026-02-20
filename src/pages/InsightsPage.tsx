@@ -145,6 +145,11 @@ function SmartInsightsCarousel() {
   const shapeControls = useAnimation()
   const slidesLen = slides.length
 
+  // Running balance — accumulates the cashback (leftValue - rightValue) from each slide
+  const balance = useMotionValue(0)
+  const formattedBalance = useTransform(balance, (v) => `₪${Math.round(v).toLocaleString()}`)
+  const balanceTarget = useRef(0)
+
   const safeIndex = useMemo(() => {
     if (slidesLen === 0) return 0
     return ((index % slidesLen) + slidesLen) % slidesLen
@@ -164,6 +169,15 @@ function SmartInsightsCarousel() {
       setVisibleTxCount(0)
     }
     return () => timers.forEach(clearTimeout)
+  }, [safeIndex])
+
+  // Accumulate balance when slide changes
+  useEffect(() => {
+    const diff = slide.leftValue - slide.rightValue
+    balanceTarget.current += diff
+    const ctrl = animate(balance, balanceTarget.current, { duration: 1.2, ease: "easeOut" })
+    return () => ctrl.stop()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeIndex])
 
   // ── Counter + slider ──
@@ -246,16 +260,38 @@ function SmartInsightsCarousel() {
 
   return (
     <div className="w-full max-w-sm relative" style={{ minHeight: 600 }}>
-      {/* Title — z-10 so background shapes never cover it */}
-      <motion.h1
-        key={`${safeIndex}-title`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-semibold mb-4 text-center relative z-10"
-        style={{ color: "var(--color-primary)" }}
-      >
-        נהפוך את ההוצאות שלך להכנסות
-      </motion.h1>
+      {/* Title + subtitle — z-10 so background shapes never cover them */}
+      <div className="relative z-10 text-center mb-6">
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-2xl font-semibold"
+          style={{ color: "var(--color-primary)" }}
+        >
+          נהפוך את ההוצאות שלך להכנסות
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-xs mt-2"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          עם עד 60% קאשבק . צבור בלי הגבלה לנקסוס שלך
+        </motion.p>
+        {/* Running balance */}
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+            יתרה שנצברה:
+          </span>
+          <motion.span
+            className="text-lg font-bold"
+            style={{ color: "var(--color-success)" }}
+          >
+            {formattedBalance}
+          </motion.span>
+        </div>
+      </div>
 
       {/* Background shape */}
       <motion.div
@@ -330,20 +366,20 @@ function SmartInsightsCarousel() {
                 />
               </div>
 
-              {/* Numbers: animated on right, static on left — flex row ensures no overlap */}
+              {/* Numbers: in RTL first = right. Animated purple on right, static gray on left */}
               <div className="flex justify-between items-center mt-2 px-1">
-                <div
-                  className="text-[11px] font-semibold"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
-                  {formattedInitial}
-                </div>
                 <motion.div
                   className="text-[11px] font-bold"
                   style={{ color: "var(--color-primary)" }}
                 >
                   {formattedAmount}
                 </motion.div>
+                <div
+                  className="text-[11px] font-semibold"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  {formattedInitial}
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
