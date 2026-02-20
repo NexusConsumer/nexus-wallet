@@ -16,6 +16,7 @@ const RECT_H = 90
 
 // ── Card dimensions ──
 const CARD_W = 240
+const TX_CARD_HEIGHT = 82 // approx height of one tx card + gap
 
 interface Slide {
   title: string
@@ -29,25 +30,25 @@ const slides: Slide[] = [
     title: "הוצאות אוכל בחוץ",
     leftValue: 2434,
     rightValue: 2102,
-    shapeColor: "#d4d0f6", // light purple (primary family)
+    shapeColor: "#d4d0f6",
   },
   {
     title: "הוצאות ביגוד והנעלה",
     leftValue: 480,
     rightValue: 58,
-    shapeColor: "#c7f5d4", // light green (success family)
+    shapeColor: "#c7f5d4",
   },
   {
     title: "הוצאות פיננסיות וביטוחים",
     leftValue: 3200,
     rightValue: 2750,
-    shapeColor: "#ddd8fc", // lavender (primary family)
+    shapeColor: "#ddd8fc",
   },
   {
     title: "הוצאות בסופר",
     leftValue: 1800,
     rightValue: 1520,
-    shapeColor: "#fde68a", // warm yellow accent
+    shapeColor: "#fde68a",
   },
 ]
 
@@ -61,27 +62,9 @@ type Tx = {
 }
 
 const clothingTxs: Tx[] = [
-  {
-    date: "15 בינואר 2024",
-    merchant: "Golf",
-    original: 180,
-    paid: 150,
-    cashback: 30,
-  },
-  {
-    date: "03 בפברואר 2024",
-    merchant: "FOX",
-    original: 220,
-    paid: 200,
-    cashback: 20,
-  },
-  {
-    date: "18 במרץ 2024",
-    merchant: "Laline",
-    original: 260,
-    paid: 210,
-    cashback: 50,
-  },
+  { date: "15 בינואר 2024", merchant: "Golf", original: 180, paid: 150, cashback: 30 },
+  { date: "03 בפברואר 2024", merchant: "FOX", original: 220, paid: 200, cashback: 20 },
+  { date: "18 במרץ 2024", merchant: "Laline", original: 260, paid: 210, cashback: 50 },
 ]
 
 function clamp(n: number, min: number, max: number) {
@@ -136,37 +119,30 @@ function RotatingBlob({ color = "#635bff" }: { color?: string }) {
 }
 
 // ── Card position for each shape pose ──
-// The card is centered horizontally (left:50%, translateX:-50%) as its base.
-// x offsets are small nudges from center (-40..+40px), so card never leaves viewport.
-// y offsets are from the card's base position (top:0 of container).
 const cardOffsets = [
-  { x: 20, y: 220 },   // pose 0: shape centered — card slightly right, mid area
-  { x: -30, y: 300 },  // pose 1: shape moved left+down — card slightly left, lower
-  { x: 40, y: 160 },   // pose 2: shape moved right+up — card slightly right, higher
-  { x: -40, y: 160 },  // pose 3: shape moved left+up — card slightly left, higher
+  { x: 20, y: 220 },
+  { x: -30, y: 300 },
+  { x: 40, y: 160 },
+  { x: -40, y: 160 },
 ]
 
-// ── Image overlay per slide — positioned on opposite side from card ──
+// ── Image overlay per slide ──
 const slideOverlays = [
-  { src: "/coffee.png",      style: { top: 120, left: 8 } as const,  initRotate: -15, endRotate: 6 },   // 0: card right → image left
-  { src: "/shoe.png",        style: { top: 120, right: 8 } as const, initRotate: 15,  endRotate: -8 },  // 1: card left  → image right
-  { src: "/calculator.png",  style: { top: 120, left: 8 } as const,  initRotate: -10, endRotate: 5 },   // 2: card right → image left
-  { src: "/avocado.png",     style: { top: 120, right: 8 } as const, initRotate: -20, endRotate: 12 },  // 3: card left  → image right
+  { src: "/coffee.png",     style: { top: 120, left: 8 } as const,  endRotate: 6 },
+  { src: "/shoe.png",       style: { top: 120, right: 8 } as const, endRotate: -8 },
+  { src: "/calculator.png", style: { top: 120, left: 8 } as const,  endRotate: 5 },
+  { src: "/avocado.png",    style: { top: 120, right: 8 } as const, endRotate: 12 },
 ]
 
-// Preload all overlay images so transitions are instant
+// Preload overlay images
 if (typeof window !== "undefined") {
-  slideOverlays.forEach(({ src }) => {
-    const img = new Image()
-    img.src = src
-  })
+  slideOverlays.forEach(({ src }) => { const i = new Image(); i.src = src })
 }
 
 function SmartInsightsCarousel() {
   const [index, setIndex] = useState(0)
   const [visibleTxCount, setVisibleTxCount] = useState(0)
   const shapeControls = useAnimation()
-  const cardControls = useAnimation()
   const slidesLen = slides.length
 
   const safeIndex = useMemo(() => {
@@ -182,62 +158,41 @@ function SmartInsightsCarousel() {
     if (safeIndex === 1) {
       setVisibleTxCount(0)
       timers.push(setTimeout(() => setVisibleTxCount(1), 900))
-      timers.push(setTimeout(() => setVisibleTxCount(2), 1600))
-      timers.push(setTimeout(() => setVisibleTxCount(3), 2300))
+      timers.push(setTimeout(() => setVisibleTxCount(2), 1800))
+      timers.push(setTimeout(() => setVisibleTxCount(3), 2700))
     } else {
       setVisibleTxCount(0)
     }
     return () => timers.forEach(clearTimeout)
   }, [safeIndex])
 
-  // ── Counter + slider (REVERSED direction: right→left) ──
+  // ── Counter + slider ──
   const amount = useMotionValue(slide.leftValue)
-  const formattedAmount = useTransform(amount, (latest) => {
-    const v = Math.round(latest)
-    return `₪${v.toLocaleString()}`
-  })
+  const formattedAmount = useTransform(amount, (v) => `₪${Math.round(v).toLocaleString()}`)
   const formattedInitial = `₪${slide.leftValue.toLocaleString()}`
 
   const percent = useMotionValue(0)
   const percentRemaining = useMemo(() => {
-    const denom = slide.leftValue
-    if (!Number.isFinite(denom) || denom <= 0) return 100
-    return clamp(100 - (slide.rightValue / denom) * 100, 0, 100)
+    const d = slide.leftValue
+    if (!Number.isFinite(d) || d <= 0) return 100
+    return clamp(100 - (slide.rightValue / d) * 100, 0, 100)
   }, [slide.leftValue, slide.rightValue])
 
-  // Keep a gap so the animated number never overlaps the static original on the left.
-  // Cap the slider fill so it stops well before reaching the left edge.
-  const MAX_FILL_PERCENT = 50
-  const adjustedPercent = useMemo(() => {
-    return clamp(percentRemaining, 0, MAX_FILL_PERCENT)
-  }, [percentRemaining])
+  // Cap at 45% so animated number never reaches the static one
+  const adjustedPercent = useMemo(() => clamp(percentRemaining, 0, 45), [percentRemaining])
 
-  // The fill goes from right side, so we use "right" percentage
+  // Slider fill: starts full width (100%), shrinks from the left
   const fillWidthCss = useTransform(percent, (p) => `${100 - p}%`)
-  // The moving number position from the right
-  const amountRightCss = useTransform(percent, (p) => `${100 - p}%`)
 
   useEffect(() => {
     percent.set(0)
     amount.set(slide.leftValue)
-    const a1 = animate(percent, adjustedPercent, {
-      duration: 1.4,
-      ease: "easeInOut",
-    })
-    const a2 = animate(amount, slide.rightValue, {
-      duration: 1.4,
-      ease: "easeInOut",
-    })
-    return () => {
-      a1.stop()
-      a2.stop()
-    }
+    const a1 = animate(percent, adjustedPercent, { duration: 1.4, ease: "easeInOut" })
+    const a2 = animate(amount, slide.rightValue, { duration: 1.4, ease: "easeInOut" })
+    return () => { a1.stop(); a2.stop() }
   }, [amount, percent, adjustedPercent, slide.leftValue, slide.rightValue])
 
   // ── Shape & card movement ──
-  // Shape poses — shapes may go partially off-screen, but must not cover the title.
-  // Shape starts at top:150 (centered). Title ends ~60px from top.
-  // So y can go down to about -60 before the shape top reaches the title.
   const poses: Pose[] = useMemo(
     () => [
       { x: 0, y: 0, rotate: 0 },
@@ -257,30 +212,18 @@ function SmartInsightsCarousel() {
     const run = async () => {
       try {
         shapeControls.set(initialOffscreen.current)
-        cardControls.set({ x: cardOffsets[0].x + 260, y: cardOffsets[0].y + 260, opacity: 0 })
 
-        await Promise.all([
-          shapeControls.start({ ...poses[0], transition: { duration: 1 } }),
-          cardControls.start({ x: cardOffsets[0].x, y: cardOffsets[0].y, opacity: 1, transition: { duration: 1 } }),
-        ])
+        await shapeControls.start({ ...poses[0], transition: { duration: 1 } })
         phaseRef.current = 0
 
         while (!cancelled) {
-          // Give clothing slide (index 1) extra time for transaction cards
-          const currentSlideIndex = phaseRef.current
-          const waitTime = currentSlideIndex === 1 ? 4500 : 2500
+          // Give clothing slide (phase 1) extra time for tx cards
+          const waitTime = phaseRef.current === 1 ? 5000 : 2800
           await sleep(waitTime)
           const nextPhase = (phaseRef.current + 1) % poses.length
           setIndex((prev) => (prev + 1) % slidesLen)
 
-          await Promise.all([
-            shapeControls.start({ ...poses[nextPhase], transition: { duration: 1 } }),
-            cardControls.start({
-              x: cardOffsets[nextPhase].x,
-              y: cardOffsets[nextPhase].y,
-              transition: { duration: 1 },
-            }),
-          ])
+          await shapeControls.start({ ...poses[nextPhase], transition: { duration: 1 } })
           phaseRef.current = nextPhase
         }
       } catch {
@@ -288,10 +231,8 @@ function SmartInsightsCarousel() {
       }
     }
     run()
-    return () => {
-      cancelled = true
-    }
-  }, [poses, shapeControls, cardControls, slidesLen])
+    return () => { cancelled = true }
+  }, [poses, shapeControls, slidesLen])
 
   const blobPos = useMemo(() => {
     if (safeIndex === 0) return { top: 84, left: 18 }
@@ -299,6 +240,9 @@ function SmartInsightsCarousel() {
     if (safeIndex === 2) return { top: 100, left: 278 }
     return { top: 100, left: 36 }
   }, [safeIndex])
+
+  // How many px to shift the card upward when tx cards appear
+  const cardLift = safeIndex === 1 ? visibleTxCount * TX_CARD_HEIGHT : 0
 
   return (
     <div className="w-full max-w-sm relative" style={{ minHeight: 600 }}>
@@ -323,21 +267,20 @@ function SmartInsightsCarousel() {
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
 
-      {/* Image overlay — one per slide, on opposite side from card (crossfade) */}
-      <AnimatePresence>
+      {/* Image overlay — crossfade with mode="wait" and fast exit */}
+      <AnimatePresence mode="wait">
         <motion.div
           key={`overlay-${safeIndex}`}
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1, rotate: slideOverlays[safeIndex].endRotate }}
-          exit={{ opacity: 0, scale: 0.6 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1, rotate: slideOverlays[safeIndex].endRotate, transition: { duration: 0.5, ease: "easeOut" } }}
+          exit={{ opacity: 0, transition: { duration: 0.2 } }}
           className="absolute z-[5]"
           style={slideOverlays[safeIndex].style}
         >
           <img
             src={slideOverlays[safeIndex].src}
             alt=""
-            style={{ width: 180, height: 'auto', filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' }}
+            style={{ width: 180, height: "auto", filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.2))" }}
           />
         </motion.div>
       </AnimatePresence>
@@ -347,20 +290,20 @@ function SmartInsightsCarousel() {
         <RotatingBlob />
       </motion.div>
 
-      {/* ── Card: centered horizontally as base, nudged by x/y offsets ── */}
+      {/* ── Card wrapper: shifts upward as tx cards stack below ── */}
       <motion.div
-        animate={cardControls}
-        className="absolute z-30 left-1/2 flex flex-col items-stretch"
+        initial={{ x: cardOffsets[0].x + 260, y: cardOffsets[0].y + 260, opacity: 0 }}
+        animate={{
+          x: cardOffsets[safeIndex]?.x ?? 0,
+          y: (cardOffsets[safeIndex]?.y ?? 220) - cardLift,
+          opacity: 1,
+        }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="absolute z-30 left-1/2"
         style={{ width: CARD_W, marginLeft: -(CARD_W / 2) }}
       >
-        {/* Main card — layout animates it upward when tx cards stack below */}
-        <motion.div
-          layout
-          transition={{ layout: { duration: 0.4, ease: "easeOut" } }}
-          className="bg-white rounded-2xl shadow-xl p-5"
-          style={{ width: CARD_W }}
-        >
-          {/* Card inner content animates on each slide */}
+        {/* Main expenses card */}
+        <div className="bg-white rounded-2xl shadow-xl p-5" style={{ width: CARD_W }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={safeIndex}
@@ -376,7 +319,7 @@ function SmartInsightsCarousel() {
                 {slide.title}
               </h2>
 
-              {/* Slider — RTL: fills from right to left */}
+              {/* Slider — fills from right to left */}
               <div
                 className="w-full h-3 rounded-full overflow-hidden"
                 style={{ backgroundColor: "var(--color-border)" }}
@@ -384,78 +327,68 @@ function SmartInsightsCarousel() {
                 <motion.div
                   style={{ width: fillWidthCss, marginLeft: "auto", backgroundColor: "var(--color-primary)" }}
                   className="h-full rounded-full"
-                  layout
-                  transition={{ duration: 0.1 }}
                 />
               </div>
 
-              {/* Numbers below slider */}
-              <div className="relative w-full h-7 mt-1">
-                {/* Moving "saved" amount — follows slider edge from the right */}
-                <motion.div
-                  style={{ right: amountRightCss, color: "var(--color-primary)" }}
-                  className="absolute translate-x-full text-[11px] font-bold whitespace-nowrap"
-                >
-                  {formattedAmount}
-                </motion.div>
-                {/* Static original value on the left */}
+              {/* Numbers: animated on right, static on left — flex row ensures no overlap */}
+              <div className="flex justify-between items-center mt-2 px-1">
                 <div
-                  className="absolute left-0 pl-1 text-[11px] font-semibold whitespace-nowrap"
+                  className="text-[11px] font-semibold"
                   style={{ color: "var(--color-text-muted)" }}
                 >
                   {formattedInitial}
                 </div>
+                <motion.div
+                  className="text-[11px] font-bold"
+                  style={{ color: "var(--color-primary)" }}
+                >
+                  {formattedAmount}
+                </motion.div>
               </div>
             </motion.div>
           </AnimatePresence>
-        </motion.div>
+        </div>
 
-        {/* Transaction Stack (clothing slide only) — each card pushes the main card up */}
-        {safeIndex === 1 && visibleTxCount > 0 && (
-          <div className="mt-2 space-y-2">
-            {clothingTxs.slice(0, visibleTxCount).map((tx) => (
-              <motion.div
-                key={tx.merchant}
-                layout
-                initial={{ y: 30, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="bg-white rounded-xl shadow-lg p-3"
-                style={{ borderColor: "var(--color-border)", borderWidth: 1 }}
-              >
-                <div className="text-[10px] mb-1" style={{ color: "var(--color-text-muted)" }}>
-                  {tx.date}
-                </div>
-                <div className="flex justify-between items-center text-xs font-medium">
-                  <span style={{ color: "var(--color-text-primary)" }}>{tx.merchant}</span>
-                  <span style={{ color: "var(--color-success)" }}>+₪{tx.cashback}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1 text-[10px] mt-2" style={{ color: "var(--color-text-muted)" }}>
-                  <div>
-                    <div>סכום עסקה</div>
-                    <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.original}</div>
-                  </div>
-                  <div>
-                    <div>שולם בפועל</div>
-                    <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.paid}</div>
-                  </div>
-                  <div>
-                    <div>החזר</div>
-                    <div className="font-semibold" style={{ color: "var(--color-success)" }}>₪{tx.cashback}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {/* Transaction cards (clothing slide) — stack below, each pushes card up */}
+        {safeIndex === 1 && clothingTxs.slice(0, visibleTxCount).map((tx, i) => (
+          <motion.div
+            key={tx.merchant}
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.45, ease: "easeOut", delay: i * 0.05 }}
+            className="bg-white rounded-xl shadow-lg p-3 mt-2"
+            style={{ borderColor: "var(--color-border)", borderWidth: 1 }}
+          >
+            <div className="text-[10px] mb-1" style={{ color: "var(--color-text-muted)" }}>
+              {tx.date}
+            </div>
+            <div className="flex justify-between items-center text-xs font-medium">
+              <span style={{ color: "var(--color-text-primary)" }}>{tx.merchant}</span>
+              <span style={{ color: "var(--color-success)" }}>+₪{tx.cashback}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1 text-[10px] mt-2" style={{ color: "var(--color-text-muted)" }}>
+              <div>
+                <div>סכום עסקה</div>
+                <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.original}</div>
+              </div>
+              <div>
+                <div>שולם בפועל</div>
+                <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.paid}</div>
+              </div>
+              <div>
+                <div>החזר</div>
+                <div className="font-semibold" style={{ color: "var(--color-success)" }}>₪{tx.cashback}</div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </motion.div>
     </div>
   )
 }
 
 export default function InsightsPage() {
-  const { lang = 'he' } = useParams()
+  const { lang = "he" } = useParams()
   const navigate = useNavigate()
 
   return (
@@ -464,12 +397,11 @@ export default function InsightsPage() {
       style={{ backgroundColor: "var(--color-surface)" }}
       dir="rtl"
     >
-      {/* Back button */}
       <button
         onClick={() => navigate(`/${lang}`)}
         className="absolute top-6 right-6 z-50 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center shadow-sm"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: '22px', color: "var(--color-text-primary)" }}>
+        <span className="material-symbols-outlined" style={{ fontSize: "22px", color: "var(--color-text-primary)" }}>
           arrow_forward
         </span>
       </button>
