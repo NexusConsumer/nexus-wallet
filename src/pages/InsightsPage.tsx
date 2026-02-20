@@ -264,18 +264,21 @@ function SmartInsightsCarousel() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 text-right mb-6 text-2xl font-semibold leading-relaxed"
+        className="relative z-10 text-right mb-4 text-2xl font-semibold leading-relaxed"
         style={{ color: "var(--color-primary)" }}
       >
-        נהפוך את ההוצאות שלך להכנסות עם עד 60% קאשבק. צבור בלי הגבלה לנקסוס שלך:{" "}
-        <motion.span
-          key={balanceTarget.current}
-          animate={{ x: [0, -3, 3, -2, 2, 0] }}
-          transition={{ duration: 0.4, ease: "easeInOut" }}
-          className="inline-block font-bold"
-        >
-          {formattedBalance}
-        </motion.span>
+        <div>נהפוך את ההוצאות שלך להכנסות עם עד 60% קאשבק.</div>
+        <div>
+          צבור בלי הגבלה לנקסוס שלך:{" "}
+          <motion.span
+            key={balanceTarget.current}
+            animate={{ x: [0, -3, 3, -2, 2, 0] }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="inline-block font-bold"
+          >
+            {formattedBalance}
+          </motion.span>
+        </div>
       </motion.div>
 
       {/* Background shape */}
@@ -283,7 +286,7 @@ function SmartInsightsCarousel() {
         animate={shapeControls}
         initial={initialOffscreen.current}
         className="absolute left-1/2 -translate-x-1/2 z-0"
-        style={{ top: 150 }}
+        style={{ top: 170 }}
       >
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
