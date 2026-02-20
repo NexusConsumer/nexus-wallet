@@ -37,6 +37,7 @@ export default function SignupPage() {
     profileData,
     setProfileData,
     phone: regPhone,
+    orgMember,
   } = useRegistrationStore();
 
   // Are we in "registration form" mode? (authenticated + has registration in progress)
@@ -352,7 +353,24 @@ export default function SignupPage() {
         {showForm && (
           <div className="animate-fade-in">
             {/* Title / Greeting */}
-            {authMethod === 'google' ? (
+            {orgMember ? (
+              /* ── Org member greeting ── */
+              <div className="text-center mb-5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+                  <span
+                    className="material-symbols-outlined text-primary"
+                    style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}
+                  >
+                    verified
+                  </span>
+                </div>
+                <h1 className="text-xl font-bold text-text-primary mb-2">
+                  {t.registration.orgMemberGreeting
+                    .replace('{name}', orgMember.firstName || profileData.firstName || '')
+                    .replace('{org}', orgMember.organizationName || '')}
+                </h1>
+              </div>
+            ) : authMethod === 'google' ? (
               <div className="text-center mb-5">
                 <h1 className="text-xl font-bold text-text-primary mb-2">
                   {t.registration.googleGreeting.replace('{name}', profileData.firstName || '')}

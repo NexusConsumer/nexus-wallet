@@ -10,7 +10,8 @@ import {
   type UserCredential,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import type { AuthSession, OtpVerifyResult } from '../types/auth.types';
+import type { AuthSession, OrgMember, OtpVerifyResult } from '../types/auth.types';
+import { lookupOrgMember } from './orgMember.service';
 
 // ── Internal state ──
 
@@ -48,6 +49,7 @@ type GoogleSignInResult = {
     lastName: string;
     picture: string;
   };
+  orgMember?: OrgMember | null;
   redirecting?: boolean;
 };
 
@@ -99,6 +101,17 @@ export async function firebaseGoogleSignIn(): Promise<GoogleSignInResult> {
     const idToken = await result.user.getIdToken();
     const res = buildGoogleResult(result);
     res.session!.token = idToken;
+
+    // Look up org member by email in Firestore
+    const email = result.user.email || '';
+    if (email) {
+      const orgMember = await lookupOrgMember({ email });
+      if (orgMember) {
+        res.orgMember = orgMember;
+        res.session!.isOrgMember = true;
+      }
+    }
+
     return res;
   } catch (error) {
     console.error('Google sign-in failed:', error);
@@ -115,6 +128,17 @@ export async function handleGoogleRedirectResult(): Promise<GoogleSignInResult> 
     const idToken = await result.user.getIdToken();
     const res = buildGoogleResult(result);
     res.session!.token = idToken;
+
+    // Look up org member by email in Firestore
+    const email = result.user.email || '';
+    if (email) {
+      const orgMember = await lookupOrgMember({ email });
+      if (orgMember) {
+        res.orgMember = orgMember;
+        res.session!.isOrgMember = true;
+      }
+    }
+
     return res;
   } catch (error) {
     console.error('Google redirect result failed:', error);
@@ -218,21 +242,31 @@ export async function firebaseVerifyOtp(
     const user = result.user;
     const idToken = await user.getIdToken();
 
+    // Look up org member by phone in Firestore
+    const phone = user.phoneNumber || '';
+    const orgMember = await lookupOrgMember({ phone });
+
     const session: AuthSession = {
       token: idToken,
       userId: user.uid,
       method: 'phone',
-      isOrgMember: false, // TODO: lookup in Firestore
+      isOrgMember: !!orgMember,
       marketingConsent: false,
     };
+
+    // If org member found, pre-fill known fields and only ask for missing ones
+    const missingFields: string[] = [];
+    if (!orgMember?.firstName) missingFields.push('firstName');
+    if (!orgMember?.lastName) missingFields.push('lastName');
+    if (!orgMember?.email) missingFields.push('email');
 
     return {
       success: true,
       session,
       registrationContext: {
-        orgMember: null,
+        orgMember: orgMember ?? null,
         profileComplete: false,
-        missingFields: ['firstName', 'lastName', 'email'],
+        missingFields,
       },
     };
   } catch (error) {

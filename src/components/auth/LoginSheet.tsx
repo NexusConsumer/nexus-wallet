@@ -329,15 +329,26 @@ export default function LoginSheet() {
     try {
       const result = await firebaseGoogleSignIn();
       if (result.success && result.session) {
+        const orgMember = result.orgMember;
+
         login({
           token: result.session.token,
           userId: result.session.userId,
           method: 'google',
           isOrgMember: result.session.isOrgMember,
           avatarUrl: result.profile?.picture,
+          organizationName: orgMember?.organizationName,
         });
         await firebaseSaveConsent(result.session.userId, marketingOptIn);
         setMarketingConsent(marketingOptIn);
+
+        // Load tenant config for org members
+        if (orgMember?.organizationId) {
+          const orgTenant = lookupTenantByOrg(orgMember.organizationId);
+          if (orgTenant) {
+            setTenant(orgTenant.id, orgTenant);
+          }
+        }
 
         // Returning user (already completed profile before) → go to requested page
         if (useAuthStore.getState().profileCompleted) {
@@ -345,7 +356,38 @@ export default function LoginSheet() {
           return;
         }
 
-        // Google gives name + email → only phone is missing
+        // ── Org member via Google: route to org-member path ──
+        if (orgMember) {
+          // Google gives email + name, org gives org info → only phone missing
+          const missingFields: string[] = ['phone'];
+          if (!orgMember.firstName && !result.profile?.firstName) missingFields.push('firstName');
+          if (!orgMember.lastName && !result.profile?.lastName) missingFields.push('lastName');
+
+          startRegistration({
+            path: 'org-member-incomplete',
+            phone: '',
+            orgMember: {
+              organizationId: orgMember.organizationId,
+              organizationName: orgMember.organizationName,
+              firstName: orgMember.firstName || result.profile?.firstName,
+              lastName: orgMember.lastName || result.profile?.lastName,
+            },
+            missingFields,
+          });
+          // Pre-fill email from Google profile
+          if (result.profile) {
+            useRegistrationStore.getState().setProfileData({
+              firstName: orgMember.firstName || result.profile.firstName,
+              lastName: orgMember.lastName || result.profile.lastName,
+              email: result.profile.email,
+            });
+          }
+          close();
+          navigate(`/${lang}/signup`);
+          return;
+        }
+
+        // ── Regular Google sign-in (not org member) ──
         const profile = result.profile;
         const regPath = tenantConfig?.requiresMembershipFee
           ? 'tenant-with-fee'

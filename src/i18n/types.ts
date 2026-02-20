@@ -247,6 +247,7 @@ export interface TranslationKeys {
     phoneConnected: string;
     googleConnected: string;
     googleGreeting: string;
+    orgMemberGreeting: string;
   };
 }
 

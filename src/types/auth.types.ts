@@ -25,6 +25,7 @@ export interface GoogleAuthResult {
 
 export interface OrgMember {
   phone: string;
+  email?: string;
   organizationId: string;
   organizationName: string;
   firstName?: string;

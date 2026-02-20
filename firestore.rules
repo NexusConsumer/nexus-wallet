@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Org members: read-only for authenticated users, no client writes
+    match /orgMembers/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Default: deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
