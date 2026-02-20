@@ -154,6 +154,14 @@ const slideOverlays = [
   { src: "/avocado.png",     style: { top: 120, right: 8 } as const, initRotate: -20, endRotate: 12 },  // 3: card left  → image right
 ]
 
+// Preload all overlay images so transitions are instant
+if (typeof window !== "undefined") {
+  slideOverlays.forEach(({ src }) => {
+    const img = new Image()
+    img.src = src
+  })
+}
+
 function SmartInsightsCarousel() {
   const [index, setIndex] = useState(0)
   const [visibleTxCount, setVisibleTxCount] = useState(0)
@@ -199,7 +207,7 @@ function SmartInsightsCarousel() {
 
   // Keep a gap so the animated number never overlaps the static original on the left.
   // Cap the slider fill so it stops well before reaching the left edge.
-  const MAX_FILL_PERCENT = 65
+  const MAX_FILL_PERCENT = 50
   const adjustedPercent = useMemo(() => {
     return clamp(percentRemaining, 0, MAX_FILL_PERCENT)
   }, [percentRemaining])
@@ -258,7 +266,10 @@ function SmartInsightsCarousel() {
         phaseRef.current = 0
 
         while (!cancelled) {
-          await sleep(2500)
+          // Give clothing slide (index 1) extra time for transaction cards
+          const currentSlideIndex = phaseRef.current
+          const waitTime = currentSlideIndex === 1 ? 4500 : 2500
+          await sleep(waitTime)
           const nextPhase = (phaseRef.current + 1) % poses.length
           setIndex((prev) => (prev + 1) % slidesLen)
 
@@ -312,14 +323,14 @@ function SmartInsightsCarousel() {
         <NexusSemicircleBaseShape color={slide.shapeColor} />
       </motion.div>
 
-      {/* Image overlay — one per slide, on opposite side from card */}
-      <AnimatePresence mode="wait">
+      {/* Image overlay — one per slide, on opposite side from card (crossfade) */}
+      <AnimatePresence>
         <motion.div
           key={`overlay-${safeIndex}`}
-          initial={{ opacity: 0, scale: 0.4, rotate: slideOverlays[safeIndex].initRotate }}
+          initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: 1, scale: 1, rotate: slideOverlays[safeIndex].endRotate }}
-          exit={{ opacity: 0, scale: 0.4 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          exit={{ opacity: 0, scale: 0.6 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
           className="absolute z-[5]"
           style={slideOverlays[safeIndex].style}
         >
@@ -339,10 +350,16 @@ function SmartInsightsCarousel() {
       {/* ── Card: centered horizontally as base, nudged by x/y offsets ── */}
       <motion.div
         animate={cardControls}
-        className="absolute z-30 left-1/2"
+        className="absolute z-30 left-1/2 flex flex-col items-stretch"
         style={{ width: CARD_W, marginLeft: -(CARD_W / 2) }}
       >
-        <div className="bg-white rounded-2xl shadow-xl p-5" style={{ width: CARD_W }}>
+        {/* Main card — layout animates it upward when tx cards stack below */}
+        <motion.div
+          layout
+          transition={{ layout: { duration: 0.4, ease: "easeOut" } }}
+          className="bg-white rounded-2xl shadow-xl p-5"
+          style={{ width: CARD_W }}
+        >
           {/* Card inner content animates on each slide */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -391,48 +408,47 @@ function SmartInsightsCarousel() {
               </div>
             </motion.div>
           </AnimatePresence>
-        </div>
+        </motion.div>
 
-        {/* Transaction Stack (clothing slide only) */}
-        <AnimatePresence>
-          {safeIndex === 1 && visibleTxCount > 0 && (
-            <div className="mt-2 space-y-2">
-              {clothingTxs.slice(0, visibleTxCount).map((tx) => (
-                <motion.div
-                  key={tx.merchant}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                  className="bg-white rounded-xl shadow-lg p-3"
-                  style={{ borderColor: "var(--color-border)", borderWidth: 1 }}
-                >
-                  <div className="text-[10px] mb-1" style={{ color: "var(--color-text-muted)" }}>
-                    {tx.date}
+        {/* Transaction Stack (clothing slide only) — each card pushes the main card up */}
+        {safeIndex === 1 && visibleTxCount > 0 && (
+          <div className="mt-2 space-y-2">
+            {clothingTxs.slice(0, visibleTxCount).map((tx) => (
+              <motion.div
+                key={tx.merchant}
+                layout
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="bg-white rounded-xl shadow-lg p-3"
+                style={{ borderColor: "var(--color-border)", borderWidth: 1 }}
+              >
+                <div className="text-[10px] mb-1" style={{ color: "var(--color-text-muted)" }}>
+                  {tx.date}
+                </div>
+                <div className="flex justify-between items-center text-xs font-medium">
+                  <span style={{ color: "var(--color-text-primary)" }}>{tx.merchant}</span>
+                  <span style={{ color: "var(--color-success)" }}>+₪{tx.cashback}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 text-[10px] mt-2" style={{ color: "var(--color-text-muted)" }}>
+                  <div>
+                    <div>סכום עסקה</div>
+                    <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.original}</div>
                   </div>
-                  <div className="flex justify-between items-center text-xs font-medium">
-                    <span style={{ color: "var(--color-text-primary)" }}>{tx.merchant}</span>
-                    <span style={{ color: "var(--color-success)" }}>+₪{tx.cashback}</span>
+                  <div>
+                    <div>שולם בפועל</div>
+                    <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.paid}</div>
                   </div>
-                  <div className="grid grid-cols-3 gap-1 text-[10px] mt-2" style={{ color: "var(--color-text-muted)" }}>
-                    <div>
-                      <div>סכום עסקה</div>
-                      <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.original}</div>
-                    </div>
-                    <div>
-                      <div>שולם בפועל</div>
-                      <div className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>₪{tx.paid}</div>
-                    </div>
-                    <div>
-                      <div>החזר</div>
-                      <div className="font-semibold" style={{ color: "var(--color-success)" }}>₪{tx.cashback}</div>
-                    </div>
+                  <div>
+                    <div>החזר</div>
+                    <div className="font-semibold" style={{ color: "var(--color-success)" }}>₪{tx.cashback}</div>
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </AnimatePresence>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </motion.div>
     </div>
   )
