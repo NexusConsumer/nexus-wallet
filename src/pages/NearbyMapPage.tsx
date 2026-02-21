@@ -9,26 +9,50 @@ const USER_LATLNG: [number, number] = [32.0636, 34.7721]
 const DEST_LATLNG: [number, number] = [32.0753, 34.7748]
 
 // Route: Rothschild → Allenby → King George → Dizengoff
+// Dense points so the fill animation is smooth
 const ROUTE_COORDS: [number, number][] = [
   [32.0636, 34.7721],
+  [32.0640, 34.7718],
+  [32.0644, 34.7714],
   [32.0648, 34.7710],
+  [32.0652, 34.7706],
+  [32.0656, 34.7702],
   [32.0659, 34.7700],
+  [32.0663, 34.7697],
+  [32.0667, 34.7695],
   [32.0671, 34.7693],
+  [32.0675, 34.7690],
+  [32.0679, 34.7688],
   [32.0682, 34.7688],
+  [32.0686, 34.7693],
+  [32.0690, 34.7698],
   [32.0693, 34.7705],
+  [32.0698, 34.7710],
+  [32.0703, 34.7714],
   [32.0708, 34.7718],
+  [32.0713, 34.7722],
+  [32.0718, 34.7726],
   [32.0722, 34.7730],
+  [32.0726, 34.7733],
+  [32.0730, 34.7736],
   [32.0735, 34.7740],
+  [32.0739, 34.7742],
+  [32.0743, 34.7744],
+  [32.0748, 34.7746],
   [32.0753, 34.7748],
 ]
 
-// Brand offers — closer to center of map so bubbles never clip
+// Total number of steps for the fill animation
+const FILL_STEPS = ROUTE_COORDS.length
+
+// Brand offers — positioned ON the route line (using route point indices)
+// Each offer sits at a specific route coordinate
 const routeOffers = [
-  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", latlng: [32.0648, 34.7728] as [number, number] },
-  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", latlng: [32.0672, 34.7710] as [number, number] },
-  { brand: "Carrefour",      logo: "/brands/carrefour.png",      discount: "10%", latlng: [32.0697, 34.7695] as [number, number] },
-  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", latlng: [32.0718, 34.7720] as [number, number] },
-  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", latlng: [32.0740, 34.7735] as [number, number] },
+  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", routeIndex: 5 },
+  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", routeIndex: 10 },
+  { brand: "Carrefour",      logo: "/brands/carrefour.png",      discount: "10%", routeIndex: 16 },
+  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", routeIndex: 22 },
+  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", routeIndex: 27 },
 ]
 
 // Preload logos
@@ -74,54 +98,6 @@ function createOfferIcon(logo: string, discount: string) {
   })
 }
 
-// ── Animated dashed route using stroke-dashoffset on SVG ──
-function AnimatedRoute({ coords, show }: { coords: [number, number][]; show: boolean }) {
-  const polyRef = useRef<L.Polyline | null>(null)
-
-  useEffect(() => {
-    if (!polyRef.current) return
-    const el = polyRef.current.getElement()
-    if (!el) return
-
-    if (show) {
-      // Get total path length
-      const pathEl = el.querySelector("path") as SVGPathElement | null
-      if (!pathEl) return
-      const totalLength = pathEl.getTotalLength()
-
-      // Set up: dashed line, fully hidden via dashoffset
-      pathEl.style.strokeDasharray = `8 6`
-      pathEl.style.strokeDashoffset = `${totalLength}`
-      pathEl.style.transition = "none"
-
-      // Force reflow then animate
-      pathEl.getBoundingClientRect()
-      pathEl.style.transition = "stroke-dashoffset 1.4s ease-out"
-      pathEl.style.strokeDashoffset = "0"
-    } else {
-      const pathEl = el?.querySelector("path") as SVGPathElement | null
-      if (pathEl) {
-        pathEl.style.transition = "none"
-        pathEl.style.strokeDashoffset = `${pathEl.getTotalLength()}`
-      }
-    }
-  }, [show])
-
-  return (
-    <Polyline
-      ref={polyRef}
-      positions={coords}
-      pathOptions={{
-        color: "#635bff",
-        weight: 4,
-        opacity: 0.85,
-        lineCap: "round",
-        lineJoin: "round",
-      }}
-    />
-  )
-}
-
 // ── Disable map interactions ──
 function DisableInteractions() {
   const map = useMap()
@@ -139,6 +115,8 @@ function DisableInteractions() {
 
 export default function NearbyMapPage() {
   const [phase, setPhase] = useState(0)
+  // fillIndex: how many route points are currently filled (0 = none, FILL_STEPS = full)
+  const [fillIndex, setFillIndex] = useState(0)
   const [visibleBubbles, setVisibleBubbles] = useState(0)
   const [loopKey, setLoopKey] = useState(0)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -149,30 +127,50 @@ export default function NearbyMapPage() {
     t.length = 0
 
     setPhase(0)
+    setFillIndex(0)
     setVisibleBubbles(0)
 
+    // Phase 1: user dot appears
     t.push(setTimeout(() => setPhase(1), 400))
+    // Phase 2: destination pin
     t.push(setTimeout(() => setPhase(2), 1400))
+    // Phase 3: show dashed background route + start filling
     t.push(setTimeout(() => setPhase(3), 2200))
-    t.push(setTimeout(() => setPhase(4), 3600))
 
-    routeOffers.forEach((_, i) => {
-      t.push(setTimeout(() => setVisibleBubbles(i + 1), 3600 + i * 500))
+    // Fill the route point by point at steady pace
+    const fillStartTime = 2400
+    const fillDuration = 2800 // total ms to fill entire route
+    const stepDelay = fillDuration / FILL_STEPS
+
+    for (let i = 1; i <= FILL_STEPS; i++) {
+      t.push(setTimeout(() => setFillIndex(i), fillStartTime + i * stepDelay))
+    }
+
+    // Show brand bubbles as the fill reaches them
+    routeOffers.forEach((offer, i) => {
+      const bubbleTime = fillStartTime + offer.routeIndex * stepDelay + 100
+      t.push(setTimeout(() => setVisibleBubbles(i + 1), bubbleTime))
     })
 
-    t.push(setTimeout(() => setPhase(5), 6500))
+    // Phase 5: hold
+    t.push(setTimeout(() => setPhase(5), 7000))
 
+    // Reset and loop
     t.push(setTimeout(() => {
       setPhase(0)
+      setFillIndex(0)
       setVisibleBubbles(0)
       setTimeout(() => setLoopKey((k) => k + 1), 600)
-    }, 8500))
+    }, 9000))
 
     return () => { t.forEach(clearTimeout); t.length = 0 }
   }, [loopKey])
 
   const centerLat = (USER_LATLNG[0] + DEST_LATLNG[0]) / 2
   const centerLng = (USER_LATLNG[1] + DEST_LATLNG[1]) / 2
+
+  // The filled portion of the route (up to fillIndex)
+  const filledCoords = ROUTE_COORDS.slice(0, fillIndex)
 
   return (
     <div
@@ -263,14 +261,41 @@ export default function NearbyMapPage() {
                 {phase >= 1 && <Marker position={USER_LATLNG} icon={userIcon} />}
                 {phase >= 2 && <Marker position={DEST_LATLNG} icon={destIcon} />}
 
-                {/* Dashed route with smooth continuous stroke-dashoffset animation */}
-                <AnimatedRoute coords={ROUTE_COORDS} show={phase >= 3} />
+                {/* Background: full dashed route (faded) */}
+                {phase >= 3 && (
+                  <Polyline
+                    positions={ROUTE_COORDS}
+                    pathOptions={{
+                      color: "#635bff",
+                      weight: 3,
+                      opacity: 0.2,
+                      dashArray: "8 6",
+                      lineCap: "round",
+                      lineJoin: "round",
+                    }}
+                  />
+                )}
 
-                {/* Brand offer bubbles */}
+                {/* Foreground: filled dashed route (grows point by point) */}
+                {fillIndex >= 2 && (
+                  <Polyline
+                    positions={filledCoords}
+                    pathOptions={{
+                      color: "#635bff",
+                      weight: 4,
+                      opacity: 0.9,
+                      dashArray: "8 6",
+                      lineCap: "round",
+                      lineJoin: "round",
+                    }}
+                  />
+                )}
+
+                {/* Brand offer bubbles — ON the route */}
                 {routeOffers.slice(0, visibleBubbles).map((offer) => (
                   <Marker
                     key={`${offer.brand}-${loopKey}`}
-                    position={offer.latlng}
+                    position={ROUTE_COORDS[offer.routeIndex]}
                     icon={createOfferIcon(offer.logo, offer.discount)}
                   />
                 ))}
