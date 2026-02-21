@@ -18,6 +18,7 @@ import SignupPage from '../pages/SignupPage';
 import NearYouMapPage from '../pages/NearYouMapPage';
 import InsightsPage from '../pages/InsightsPage';
 import StoriesPage from '../pages/StoriesPage';
+import PremiumRevealPage from '../pages/PremiumRevealPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: 'near-you-map', element: <NearYouMapPage /> },
       { path: 'insights', element: <InsightsPage /> },
       { path: 'stories', element: <StoriesPage /> },
+      { path: 'premium-reveal', element: <PremiumRevealPage /> },
       { path: 'signup', element: <SignupPage /> },
 
       // Registration flow (outside AppLayout, full-page)

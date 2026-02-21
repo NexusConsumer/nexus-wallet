@@ -96,6 +96,12 @@ export default function HomePage() {
         >
           Smart Stories (Dev)
         </button>
+        <button
+          onClick={() => navigate(`/${lang}/premium-reveal`)}
+          className="w-full py-3 rounded-2xl bg-pink-500/10 text-pink-600 text-xs font-semibold border border-pink-500/20 active:scale-[0.98] transition-all"
+        >
+          Premium Reveal (Dev)
+        </button>
       </div>
     </div>
   );
