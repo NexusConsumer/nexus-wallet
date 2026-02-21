@@ -4,11 +4,11 @@ import { useNavigate, useParams } from "react-router-dom"
 
 // ── Constants ──
 const BG_COLOR = "#1A4A7A" // screen background — lighter blue
-const DARK_COLOR = "#0A2540" // container + cap — darker blue (depth)
+const DARK_COLOR = "#0A2540" // container + reveal base — darker blue (depth)
 const CAP_SIZE = 76
 const CAP_TOP_PAD = 8
 const TRACK_GAP = 3
-const REVEAL_GAP = 4 // gap between cap and reveal track
+const REVEAL_GAP = 4 // gap between cap and reveal track inner wall
 const PILL_MIN = CAP_TOP_PAD + CAP_SIZE / 2
 const TRIGGER = 0.88
 
@@ -25,18 +25,6 @@ interface Particle {
   color: string
 }
 
-/** Clip-path: full viewport minus a rounded-top track cutout at bottom center */
-function buildOverlayClip(
-  vw: number, vh: number, w: number, h: number,
-): string {
-  const cx = vw / 2
-  const left = cx - w / 2
-  const right = cx + w / 2
-  const top = vh - h
-  const r = w / 2
-  return `path(evenodd, "M0,0 L${vw},0 L${vw},${vh} L0,${vh} Z M${left},${vh} L${left},${top + r} A${r},${r} 0 0,1 ${right},${top + r} L${right},${vh} Z")`
-}
-
 export default function PremiumRevealPage() {
   const { lang = "he" } = useParams()
   const navigate = useNavigate()
@@ -49,14 +37,12 @@ export default function PremiumRevealPage() {
   const [ripples, setRipples] = useState<number[]>([])
   const [particles, setParticles] = useState<Particle[]>([])
   const [viewH, setViewH] = useState(800)
-  const [viewW, setViewW] = useState(400)
 
   const startYRef = useRef(0)
 
   // Prevent iOS bounce / overscroll
   useEffect(() => {
     setViewH(window.innerHeight)
-    setViewW(window.innerWidth)
     const prevent = (e: TouchEvent) => e.preventDefault()
     document.addEventListener("touchmove", prevent, { passive: false })
     document.body.style.overflow = "hidden"
@@ -72,17 +58,31 @@ export default function PremiumRevealPage() {
 
   const PILL_MAX = viewH * 0.88
 
-  // Cap position
-  const capBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
-
-  // Reveal track wraps tightly around the cap (shows gradient halo)
+  // Reveal track wraps tightly around the cap
   const revealW = CAP_SIZE + REVEAL_GAP * 2
   const revealBaseH = Math.round(viewH / 6)
-  const revealH = Math.max(revealBaseH, capBottom + CAP_SIZE + CAP_TOP_PAD + REVEAL_GAP)
 
-  // Container = same as reveal + border (no gap between them — seamless)
+  // Container = reveal + border
   const containerW = revealW + TRACK_GAP * 2
+
+  // Clamp pillHeight so cap never exceeds container
+  // capBottom = pillHeight - PILL_MIN - CAP_SIZE/2
+  // We need capBottom + CAP_SIZE + CAP_TOP_PAD <= containerH
+  // containerH = revealH + TRACK_GAP
+  // revealH grows with capBottom, so we need an explicit max
+  const maxContainerH = viewH * 0.92 // container can't be taller than 92% of screen
+
+  // Cap position (clamped)
+  const rawCapBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
+  const maxCapBottom = maxContainerH - TRACK_GAP - CAP_SIZE - CAP_TOP_PAD - REVEAL_GAP
+  const capBottom = Math.min(rawCapBottom, maxCapBottom)
+
+  // Reveal track height grows with cap position
+  const revealH = Math.max(revealBaseH, capBottom + CAP_SIZE + CAP_TOP_PAD + REVEAL_GAP)
   const containerH = revealH + TRACK_GAP
+
+  // Gradient reveal fill progress
+  const pillProgress = (pillHeight - PILL_MIN) / (PILL_MAX - PILL_MIN)
 
   // ── Drag handlers ──
   const handlePointerDown = useCallback(
@@ -148,16 +148,13 @@ export default function PremiumRevealPage() {
     setTimeout(() => navigate(`/${lang}`), 2500)
   }, [lang, navigate])
 
-  // Gradient reveal fill progress
-  const pillProgress = (pillHeight - PILL_MIN) / (PILL_MAX - PILL_MIN)
-
   return (
     <div
       className="fixed inset-0 overflow-hidden"
       dir="rtl"
       style={{ touchAction: "none", overscrollBehavior: "none" }}
     >
-      {/* Layer 0 — Animated gradient background (hidden under overlay) */}
+      {/* Layer 0 — Animated gradient background (hidden under overlay, visible after reveal) */}
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#ffb74d] via-[#ff91b8] to-[#9c88ff]">
         <div
           className="absolute"
@@ -192,20 +189,19 @@ export default function PremiumRevealPage() {
         </div>
       </div>
 
-      {/* Layer 1 — Dark blue overlay (main screen) with outer hole */}
+      {/* Layer 1 — Solid overlay covers entire screen (no clip-path!) */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
           background: BG_COLOR,
-          clipPath: buildOverlayClip(viewW, viewH, containerW, containerH),
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
         }}
       />
 
-      {/* Container track — dark, creates depth illusion */}
+      {/* Container track — dark, outer shell, creates depth illusion */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[6] pointer-events-none"
+        className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[15] pointer-events-none"
         style={{
           width: containerW,
           height: containerH,
@@ -216,9 +212,9 @@ export default function PremiumRevealPage() {
         }}
       />
 
-      {/* Reveal track — wraps cap, starts dark, fills with gradient as cap rises */}
+      {/* Reveal track — wraps cap tightly, starts dark, fills with gradient as cap rises */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[7] pointer-events-none"
+        className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[16] pointer-events-none"
         style={{
           width: revealW,
           height: revealH,
@@ -240,7 +236,7 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Logo — centered, dark (same color as container) */}
+      {/* Logo — centered, dark (matches container color) */}
       <div
         className="absolute inset-0 flex items-center justify-center z-20"
         style={{
@@ -260,7 +256,7 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Cap button — innermost, starts half-cut by screen bottom */}
+      {/* Cap button — innermost, BG_COLOR (lighter blue, matches screen) */}
       <div
         className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center justify-center"
         style={{
@@ -268,7 +264,7 @@ export default function PremiumRevealPage() {
           height: CAP_SIZE,
           bottom: capBottom,
           borderRadius: "50%",
-          background: DARK_COLOR,
+          background: BG_COLOR,
           boxShadow: "0 0 12px 2px rgba(0,0,0,0.3)",
           cursor: revealed ? "default" : "grab",
           touchAction: "none",
