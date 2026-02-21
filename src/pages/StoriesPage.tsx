@@ -5,8 +5,9 @@ import { SmartInsightsCarousel } from "./InsightsPage"
 import GiftCardsPage from "./GiftCardsPage"
 import WalletCardsPage from "./WalletCardsPage"
 import NearbyMapPage from "./NearbyMapPage"
+import { PremiumRevealContent } from "./PremiumRevealPage"
 
-const STORY_COUNT = 4
+const STORY_COUNT = 5
 const STORY_DURATION = 12000 // ms per story
 
 /** Instagram-style stories with progress bars and tap navigation */
@@ -33,8 +34,16 @@ export default function StoriesPage() {
     [lang, navigate]
   )
 
-  // Auto-advance timer
+  // Last story (premium reveal) is interactive — no auto-advance
+  const isInteractiveStory = currentStory === STORY_COUNT - 1
+
+  // Auto-advance timer (paused on interactive stories)
   useEffect(() => {
+    if (isInteractiveStory) {
+      setProgress(1) // show full progress bar for last story
+      return
+    }
+
     startTimeRef.current = Date.now()
 
     const tick = () => {
@@ -53,7 +62,7 @@ export default function StoriesPage() {
     return () => {
       if (timerRef.current) cancelAnimationFrame(timerRef.current)
     }
-  }, [currentStory, goToStory])
+  }, [currentStory, goToStory, isInteractiveStory])
 
   // Tap left = next story, right = previous (RTL)
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -106,7 +115,10 @@ export default function StoriesPage() {
       </button>
 
       {/* Story content */}
-      <div className="flex-1 relative overflow-hidden rounded-t-2xl" onClick={handleTap}>
+      <div
+        className="flex-1 relative overflow-hidden rounded-t-2xl"
+        onClick={isInteractiveStory ? undefined : handleTap}
+      >
         <motion.div
           key={currentStory}
           initial={{ opacity: 0 }}
@@ -126,6 +138,9 @@ export default function StoriesPage() {
           {currentStory === 1 && <GiftCardsPage />}
           {currentStory === 2 && <WalletCardsPage />}
           {currentStory === 3 && <NearbyMapPage />}
+          {currentStory === 4 && (
+            <PremiumRevealContent onReveal={() => navigate(`/${lang}`)} />
+          )}
         </motion.div>
       </div>
     </div>

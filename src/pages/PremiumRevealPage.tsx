@@ -3,12 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 // ── Constants ──
-const BG_COLOR = "#1A4A7A" // screen background — lighter blue
-const DARK_COLOR = "#0A2540" // container + reveal base — darker blue (depth)
+const BG_COLOR = "#f6f9fc" // stories surface background
+const DARK_COLOR = "#000000" // stories slider black — container initial color
+const CAP_COLOR = "#635bff" // signature purple — cap button
 const CAP_SIZE = 76
 const CAP_TOP_PAD = 8
 const TRACK_GAP = 3
-const REVEAL_GAP = 4 // gap between cap and reveal track inner wall
+const REVEAL_GAP = 4
 const PILL_MIN = CAP_TOP_PAD + CAP_SIZE / 2
 const TRIGGER = 0.88
 const LOGO_SIZE = 72
@@ -27,7 +28,11 @@ interface Particle {
   color: string
 }
 
-export default function PremiumRevealPage() {
+/**
+ * Premium Reveal content — can be used standalone or embedded inside StoriesPage.
+ * When `onReveal` is provided, it's called on trigger instead of navigating.
+ */
+export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
   const { lang = "he" } = useParams()
   const navigate = useNavigate()
 
@@ -40,74 +45,60 @@ export default function PremiumRevealPage() {
   const [viewH, setViewH] = useState(800)
 
   const startYRef = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Prevent iOS bounce / overscroll
   useEffect(() => {
-    setViewH(window.innerHeight)
-    const prevent = (e: TouchEvent) => e.preventDefault()
-    document.addEventListener("touchmove", prevent, { passive: false })
-    document.body.style.overflow = "hidden"
-    document.body.style.position = "fixed"
-    document.body.style.inset = "0"
-    return () => {
-      document.removeEventListener("touchmove", prevent)
-      document.body.style.overflow = ""
-      document.body.style.position = ""
-      document.body.style.inset = ""
+    const updateH = () => {
+      if (containerRef.current) {
+        setViewH(containerRef.current.clientHeight)
+      } else {
+        setViewH(window.innerHeight)
+      }
     }
+    updateH()
+    window.addEventListener("resize", updateH)
+    return () => window.removeEventListener("resize", updateH)
   }, [])
 
   const PILL_MAX = viewH * 0.88
 
-  // Reveal track wraps tightly around the cap
   const revealW = CAP_SIZE + REVEAL_GAP * 2
-
-  // Container = reveal + border
   const containerW = revealW + TRACK_GAP * 2
-
-  // Base container height (initial well)
   const containerBaseH = Math.round(viewH / 6)
 
-  // Cap position — grows freely
   const capBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
 
-  // Container grows with cap — always tall enough to contain the cap
   const revealH = Math.max(containerBaseH, capBottom + CAP_SIZE + CAP_TOP_PAD + REVEAL_GAP)
   const containerH = revealH + TRACK_GAP
 
-  // Gradient reveal fill progress
   const pillProgress = (pillHeight - PILL_MIN) / (PILL_MAX - PILL_MIN)
 
-  // ── Container gradient fill ──
-  // Container fills with gradient instantly when cap touches the initial container top
   const capTopFromBottom = capBottom + CAP_SIZE
   const initialContainerTop = containerBaseH + TRACK_GAP
   const containerFilled = capTopFromBottom + CAP_TOP_PAD >= initialContainerTop
 
-  // ── Logo transfer to cap ──
+  // Logo transfer
   const logoCenterFromBottom = viewH / 2
   const capCenterFromBottom = capBottom + CAP_SIZE / 2
 
-  // Blend: 0 = logo at screen center, 1 = logo on cap
   const logoTransitionStart = logoCenterFromBottom - LOGO_SIZE * 1.5
   const logoTransitionEnd = logoCenterFromBottom - LOGO_SIZE * 0.3
   const logoBlend = Math.min(1, Math.max(0,
     (capCenterFromBottom - logoTransitionStart) / (logoTransitionEnd - logoTransitionStart),
   ))
 
-  // Logo bottom: interpolate between centered and on-cap
   const logoCenteredBottom = viewH / 2 - LOGO_SIZE / 2
   const logoOnCapBottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2
   const logoBottom = logoCenteredBottom + (logoOnCapBottom - logoCenteredBottom) * logoBlend
 
-  // Arrow opacity: fade out as logo lands on cap
   const arrowOpacity = 1 - logoBlend
 
-  // ── Drag handlers ──
+  // Drag handlers
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (revealed) return
       e.preventDefault()
+      e.stopPropagation()
       setIsDragging(true)
       startYRef.current = e.clientY
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
@@ -118,6 +109,7 @@ export default function PremiumRevealPage() {
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!isDragging || revealed) return
+      e.stopPropagation()
       const dy = startYRef.current - e.clientY
       if (dy > 0) {
         setPillHeight(Math.min(PILL_MIN + dy, PILL_MAX))
@@ -139,7 +131,6 @@ export default function PremiumRevealPage() {
     }
   }, [isDragging, pillHeight, revealed, PILL_MAX])
 
-  // ── Reveal sequence ──
   const triggerReveal = useCallback(() => {
     setRevealed(true)
 
@@ -163,16 +154,27 @@ export default function PremiumRevealPage() {
     }, 150)
 
     if (navigator.vibrate) navigator.vibrate([20, 40, 20])
-    setTimeout(() => navigate(`/${lang}`), 2500)
-  }, [lang, navigate])
+
+    setTimeout(() => {
+      if (onReveal) {
+        onReveal()
+      } else {
+        navigate(`/${lang}`)
+      }
+    }, 2500)
+  }, [lang, navigate, onReveal])
 
   return (
     <div
-      className="fixed inset-0 overflow-hidden"
-      dir="rtl"
-      style={{ touchAction: "none", overscrollBehavior: "none" }}
+      ref={containerRef}
+      className="absolute inset-0 overflow-hidden"
+      style={{
+        touchAction: "none",
+        overscrollBehavior: "none",
+        background: BG_COLOR,
+      }}
     >
-      {/* Layer 0 — Animated gradient background (hidden under overlay, visible after reveal) */}
+      {/* Layer 0 — Animated gradient background */}
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#ffb74d] via-[#ff91b8] to-[#9c88ff]">
         <div
           className="absolute"
@@ -184,30 +186,15 @@ export default function PremiumRevealPage() {
             filter: "blur(70px)",
           }}
         >
-          <div
-            className="absolute rounded-full"
-            style={{ width: "55%", height: "65%", top: "0%", left: "50%", opacity: 0.9, background: "radial-gradient(circle, #d881f4, #c068e0)", animation: "blob1 10s ease-in-out infinite alternate" }}
-          />
-          <div
-            className="absolute rounded-full"
-            style={{ width: "60%", height: "60%", top: "20%", left: "20%", opacity: 0.9, background: "radial-gradient(circle, #80deea, #4dd0e1)", animation: "blob2 13s ease-in-out infinite alternate" }}
-          />
-          <div
-            className="absolute rounded-full"
-            style={{ width: "45%", height: "45%", top: "12%", left: "-5%", opacity: 0.8, background: "radial-gradient(circle, #ffd54f, #ffb74d)", animation: "blob3 12s ease-in-out infinite alternate" }}
-          />
-          <div
-            className="absolute rounded-full"
-            style={{ width: "55%", height: "55%", top: "30%", left: "40%", opacity: 0.85, background: "radial-gradient(circle, #f48fb1, #ec407a)", animation: "blob4 11s ease-in-out infinite alternate" }}
-          />
-          <div
-            className="absolute rounded-full"
-            style={{ width: "50%", height: "55%", top: "5%", left: "30%", opacity: 0.85, background: "radial-gradient(circle, #b39ddb, #9575cd)", animation: "blob5 14s ease-in-out infinite alternate" }}
-          />
+          <div className="absolute rounded-full" style={{ width: "55%", height: "65%", top: "0%", left: "50%", opacity: 0.9, background: "radial-gradient(circle, #d881f4, #c068e0)", animation: "blob1 10s ease-in-out infinite alternate" }} />
+          <div className="absolute rounded-full" style={{ width: "60%", height: "60%", top: "20%", left: "20%", opacity: 0.9, background: "radial-gradient(circle, #80deea, #4dd0e1)", animation: "blob2 13s ease-in-out infinite alternate" }} />
+          <div className="absolute rounded-full" style={{ width: "45%", height: "45%", top: "12%", left: "-5%", opacity: 0.8, background: "radial-gradient(circle, #ffd54f, #ffb74d)", animation: "blob3 12s ease-in-out infinite alternate" }} />
+          <div className="absolute rounded-full" style={{ width: "55%", height: "55%", top: "30%", left: "40%", opacity: 0.85, background: "radial-gradient(circle, #f48fb1, #ec407a)", animation: "blob4 11s ease-in-out infinite alternate" }} />
+          <div className="absolute rounded-full" style={{ width: "50%", height: "55%", top: "5%", left: "30%", opacity: 0.85, background: "radial-gradient(circle, #b39ddb, #9575cd)", animation: "blob5 14s ease-in-out infinite alternate" }} />
         </div>
       </div>
 
-      {/* Layer 1 — Solid overlay covers entire screen */}
+      {/* Layer 1 — BG overlay */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
@@ -217,7 +204,7 @@ export default function PremiumRevealPage() {
         }}
       />
 
-      {/* Container track — grows with cap, fills with gradient */}
+      {/* Container track */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[15] pointer-events-none"
         style={{
@@ -230,7 +217,6 @@ export default function PremiumRevealPage() {
           transition: revealed ? "opacity 0.4s" : isDragging ? "opacity 0.4s" : "height 0.3s ease-out, opacity 0.4s",
         }}
       >
-        {/* Gradient fill — instant fill when cap reaches container top */}
         <div
           className="absolute inset-0"
           style={{
@@ -241,7 +227,7 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Reveal track — wraps cap tightly, gradient halo */}
+      {/* Reveal track */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[16] pointer-events-none"
         style={{
@@ -254,7 +240,6 @@ export default function PremiumRevealPage() {
           transition: revealed ? "opacity 0.4s" : isDragging ? "opacity 0.4s" : "height 0.3s ease-out, opacity 0.4s",
         }}
       >
-        {/* Gradient filling from bottom up */}
         <div
           className="absolute left-0 right-0 bottom-0"
           style={{
@@ -265,7 +250,7 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Logo — starts centered, transfers onto cap (same size), replaces arrow */}
+      {/* Logo — transfers onto cap */}
       <div
         className="absolute left-1/2 -translate-x-1/2 z-[35] pointer-events-none"
         style={{
@@ -292,7 +277,7 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Cap button — gradient ring wrapper + inner cap */}
+      {/* Cap button — purple with gradient ring */}
       <div
         className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center justify-center"
         style={{
@@ -316,10 +301,9 @@ export default function PremiumRevealPage() {
             width: CAP_SIZE,
             height: CAP_SIZE,
             borderRadius: "50%",
-            background: BG_COLOR,
+            background: CAP_COLOR,
           }}
         >
-          {/* Arrow — fades out as logo arrives */}
           <svg
             width="22"
             height="22"
@@ -341,7 +325,7 @@ export default function PremiumRevealPage() {
         </div>
       </div>
 
-      {/* Flash overlay */}
+      {/* Flash */}
       <div
         className="absolute inset-0 z-50 pointer-events-none"
         style={{
@@ -375,15 +359,6 @@ export default function PremiumRevealPage() {
       {particles.map((p) => (
         <ParticleDot key={p.id} p={p} />
       ))}
-
-      {/* Close button */}
-      <button
-        onClick={() => navigate(`/${lang}`)}
-        className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full flex items-center justify-center"
-        style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
-      >
-        <span className="text-white text-lg leading-none">&times;</span>
-      </button>
 
       {/* Blob animation keyframes */}
       <style>{`
@@ -423,6 +398,42 @@ export default function PremiumRevealPage() {
           100% { transform: translate(-20%, 15%) scale(1.3); }
         }
       `}</style>
+    </div>
+  )
+}
+
+/** Standalone page wrapper (keeps route working) */
+export default function PremiumRevealPage() {
+  const { lang = "he" } = useParams()
+  const navigate = useNavigate()
+
+  // Prevent iOS bounce
+  useEffect(() => {
+    const prevent = (e: TouchEvent) => e.preventDefault()
+    document.addEventListener("touchmove", prevent, { passive: false })
+    document.body.style.overflow = "hidden"
+    document.body.style.position = "fixed"
+    document.body.style.inset = "0"
+    return () => {
+      document.removeEventListener("touchmove", prevent)
+      document.body.style.overflow = ""
+      document.body.style.position = ""
+      document.body.style.inset = ""
+    }
+  }, [])
+
+  return (
+    <div className="fixed inset-0" dir="rtl" style={{ touchAction: "none" }}>
+      <PremiumRevealContent onReveal={() => navigate(`/${lang}`)} />
+
+      {/* Close button (standalone only) */}
+      <button
+        onClick={() => navigate(`/${lang}`)}
+        className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+      >
+        <span className="text-white text-lg leading-none">&times;</span>
+      </button>
     </div>
   )
 }
