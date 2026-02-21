@@ -3,21 +3,38 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 // ── Constants ──
-const BG_COLOR = "#f6f9fc" // stories surface background
-const DARK_COLOR = "#000000" // stories slider black — container initial color
-const CAP_COLOR = "#635bff" // signature purple — cap button
+const BG_COLOR = "#f6f9fc"
+const DARK_COLOR = "#000000"
+const CAP_COLOR = "#635bff"
 const CAP_SIZE = 76
 const CAP_TOP_PAD = 8
 const TRACK_GAP = 3
 const REVEAL_GAP = 4
 const PILL_MIN = CAP_TOP_PAD + CAP_SIZE / 2
 const TRIGGER = 0.88
-const LOGO_SIZE = 72
 const RING_THICKNESS = 3
 
 const PARTICLE_COLORS = [
   "#d881f4", "#80deea", "#ffd54f", "#f48fb1",
   "#b39ddb", "#ff91b8", "#ffb74d", "#ffffff",
+]
+
+// Brand bubbles config
+const BRANDS = [
+  { name: "Carrefour", logo: "/brands/carrefour.png", color: "#FFFFFF" },
+  { name: "Golf & Co", logo: "/brands/golf.png", color: "#FFFFFF" },
+  { name: "American Eagle", logo: "/brands/american-eagle.png", color: "#00205B" },
+  { name: "Rami Levy", logo: "/brands/rami-levy.png", color: "#B3171D" },
+  { name: "Mango", logo: "/brands/mango.png", color: "#FFFFFF" },
+  { name: "Foot Locker", logo: "/brands/foot-locker.png", color: "#D3D3D3" },
+  { name: "Samsung", logo: "/brands/samsung.png", color: "#1428A0" },
+  { name: "Castro Home", logo: "/brands/castro-home.png", color: "#F5F5DC" },
+  { name: "Billabong", logo: "/brands/billabong.png", color: "#00A5A5" },
+  { name: "Hoodies", logo: "/brands/hoodis.png", color: "#8BA83F" },
+  { name: "Sack's", logo: "/brands/sacks.png", color: "#F5F5DC" },
+  { name: "Magnolia", logo: "/brands/magnolia.png", color: "#F5E6E8" },
+  { name: "Yves Rocher", logo: "/brands/yves-rocher.png", color: "#FFFFFF" },
+  { name: "Ruby Bay", logo: "/brands/ruby-bay.png", color: "#7AB3C4" },
 ]
 
 interface Particle {
@@ -28,9 +45,18 @@ interface Particle {
   color: string
 }
 
+interface Bubble {
+  id: number
+  brand: typeof BRANDS[0]
+  left: number
+  size: number
+  duration: number
+  delay: number
+  drift: number
+}
+
 /**
- * Premium Reveal content — can be used standalone or embedded inside StoriesPage.
- * When `onReveal` is provided, it's called on trigger instead of navigating.
+ * Premium Reveal content — embeddable in StoriesPage or standalone.
  */
 export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
   const { lang = "he" } = useParams()
@@ -42,10 +68,12 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
   const [showFlash, setShowFlash] = useState(false)
   const [ripples, setRipples] = useState<number[]>([])
   const [particles, setParticles] = useState<Particle[]>([])
+  const [bubbles, setBubbles] = useState<Bubble[]>([])
   const [viewH, setViewH] = useState(800)
 
   const startYRef = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const bubbleIdRef = useRef(0)
 
   useEffect(() => {
     const updateH = () => {
@@ -59,6 +87,41 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
     window.addEventListener("resize", updateH)
     return () => window.removeEventListener("resize", updateH)
   }, [])
+
+  // Spawn rising bubbles after reveal
+  useEffect(() => {
+    if (!revealed) return
+
+    // Initial batch with staggered delays
+    const initial: Bubble[] = BRANDS.map((brand, i) => ({
+      id: bubbleIdRef.current++,
+      brand,
+      left: Math.random() * 70 + 15,
+      size: Math.random() * 30 + 65,
+      duration: Math.random() * 5 + 10,
+      delay: i * 0.4,
+      drift: (Math.random() - 0.5) * 60,
+    }))
+    setBubbles(initial)
+
+    // Keep spawning
+    const interval = setInterval(() => {
+      setBubbles(prev => {
+        const brand = BRANDS[Math.floor(Math.random() * BRANDS.length)]
+        return [...prev.slice(-30), {
+          id: bubbleIdRef.current++,
+          brand,
+          left: Math.random() * 70 + 15,
+          size: Math.random() * 30 + 65,
+          duration: Math.random() * 5 + 10,
+          delay: 0,
+          drift: (Math.random() - 0.5) * 60,
+        }]
+      })
+    }, 1500)
+
+    return () => clearInterval(interval)
+  }, [revealed])
 
   const PILL_MAX = viewH * 0.88
 
@@ -77,21 +140,8 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
   const initialContainerTop = containerBaseH + TRACK_GAP
   const containerFilled = capTopFromBottom + CAP_TOP_PAD >= initialContainerTop
 
-  // Logo transfer
-  const logoCenterFromBottom = viewH / 2
-  const capCenterFromBottom = capBottom + CAP_SIZE / 2
-
-  const logoTransitionStart = logoCenterFromBottom - LOGO_SIZE * 1.5
-  const logoTransitionEnd = logoCenterFromBottom - LOGO_SIZE * 0.3
-  const logoBlend = Math.min(1, Math.max(0,
-    (capCenterFromBottom - logoTransitionStart) / (logoTransitionEnd - logoTransitionStart),
-  ))
-
-  const logoCenteredBottom = viewH / 2 - LOGO_SIZE / 2
-  const logoOnCapBottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2
-  const logoBottom = logoCenteredBottom + (logoOnCapBottom - logoCenteredBottom) * logoBlend
-
-  const arrowOpacity = 1 - logoBlend
+  // Text fades out as user drags
+  const textOpacity = Math.max(0, 1 - pillProgress * 3)
 
   // Drag handlers
   const handlePointerDown = useCallback(
@@ -161,13 +211,14 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
       } else {
         navigate(`/${lang}`)
       }
-    }, 2500)
+    }, 4000)
   }, [lang, navigate, onReveal])
 
   return (
     <div
       ref={containerRef}
       className="absolute inset-0 overflow-hidden"
+      dir="rtl"
       style={{
         touchAction: "none",
         overscrollBehavior: "none",
@@ -203,6 +254,74 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
           transition: "opacity 0.4s",
         }}
       />
+
+      {/* Rising brand bubbles — appear after reveal on top of gradient */}
+      {revealed && (
+        <div className="absolute inset-0 z-[5] overflow-hidden pointer-events-none">
+          {bubbles.map((b) => (
+            <div
+              key={b.id}
+              className="absolute"
+              style={{
+                left: `${b.left}%`,
+                bottom: "-120px",
+                width: b.size,
+                height: b.size,
+                animationName: "riseBubble",
+                animationDuration: `${b.duration}s`,
+                animationDelay: `${b.delay}s`,
+                animationTimingFunction: "linear",
+                animationFillMode: "forwards",
+                ["--drift" as string]: `${b.drift}px`,
+              }}
+            >
+              <div
+                className="w-full h-full rounded-full flex items-center justify-center shadow-xl"
+                style={{
+                  backgroundColor: b.brand.color,
+                  boxShadow: `0 10px 40px ${b.brand.color}40`,
+                }}
+              >
+                <img
+                  src={b.brand.logo}
+                  alt={b.brand.name}
+                  className="w-3/5 h-3/5 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Text — centered, fades out on drag */}
+      <div
+        className="absolute inset-x-0 z-20 flex flex-col items-center justify-center pointer-events-none"
+        style={{
+          top: "30%",
+          opacity: revealed ? 0 : textOpacity,
+          transition: revealed ? "opacity 0.4s" : "none",
+        }}
+      >
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="text-3xl font-bold text-center mb-3"
+          style={{ color: DARK_COLOR }}
+        >
+          הכל מוכן.
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-lg text-center"
+          style={{ color: "#425466" }}
+        >
+          הצעד הבא שלך מחכה
+        </motion.p>
+      </div>
 
       {/* Container track */}
       <div
@@ -250,46 +369,39 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
         />
       </div>
 
-      {/* Logo — transfers onto cap */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 z-[35] pointer-events-none"
-        style={{
-          width: LOGO_SIZE,
-          height: LOGO_SIZE,
-          bottom: logoBottom,
-          opacity: revealed ? 0 : 1,
-          transition: revealed
-            ? "opacity 0.4s"
-            : isDragging
-              ? "opacity 0.4s"
-              : "bottom 0.3s ease-out, opacity 0.4s",
-        }}
-      >
-        <img
-          src="/nexus-icon.png"
-          alt="Nexus"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            filter: "brightness(0) invert(10%) sepia(80%) saturate(600%) hue-rotate(185deg)",
-          }}
-        />
-      </div>
-
-      {/* Cap button — purple with gradient ring */}
-      <div
+      {/* Cap button — purple with gradient ring + bounce animation */}
+      <motion.div
         className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center justify-center"
+        initial={{ bottom: capBottom - RING_THICKNESS }}
+        animate={
+          !isDragging && pillHeight === PILL_MIN && !revealed
+            ? {
+                bottom: [
+                  capBottom - RING_THICKNESS,
+                  capBottom - RING_THICKNESS + 12,
+                  capBottom - RING_THICKNESS,
+                ],
+              }
+            : { bottom: capBottom - RING_THICKNESS }
+        }
+        transition={
+          !isDragging && pillHeight === PILL_MIN && !revealed
+            ? {
+                duration: 1.8,
+                repeat: Infinity,
+                repeatDelay: 1.5,
+                ease: "easeInOut",
+              }
+            : { duration: isDragging ? 0 : 0.3, ease: "easeOut" }
+        }
         style={{
           width: CAP_SIZE + RING_THICKNESS * 2,
           height: CAP_SIZE + RING_THICKNESS * 2,
-          bottom: capBottom - RING_THICKNESS,
           borderRadius: "50%",
           background: "conic-gradient(#d881f4, #80deea, #ffd54f, #f48fb1, #b39ddb, #d881f4)",
           cursor: revealed ? "default" : "grab",
           touchAction: "none",
           opacity: revealed ? 0 : 1,
-          transition: isDragging ? "opacity 0.4s" : "bottom 0.3s ease-out, opacity 0.4s",
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -304,16 +416,7 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
             background: CAP_COLOR,
           }}
         >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 20 20"
-            fill="none"
-            style={{
-              opacity: arrowOpacity,
-              transition: isDragging ? "none" : "opacity 0.3s ease-out",
-            }}
-          >
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
             <path
               d="M10 15V5M10 5L5 10M10 5L15 10"
               stroke="white"
@@ -323,7 +426,7 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
             />
           </svg>
         </div>
-      </div>
+      </motion.div>
 
       {/* Flash */}
       <div
@@ -360,7 +463,7 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
         <ParticleDot key={p.id} p={p} />
       ))}
 
-      {/* Blob animation keyframes */}
+      {/* Keyframes */}
       <style>{`
         @keyframes blob1 {
           0% { transform: translate(0, 0) scale(1); }
@@ -397,17 +500,39 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
           75% { transform: translate(20%, 20%) scale(0.85); }
           100% { transform: translate(-20%, 15%) scale(1.3); }
         }
+        @keyframes riseBubble {
+          0% {
+            transform: translateY(0) translateX(0) scale(0.7);
+            opacity: 0;
+          }
+          5% {
+            opacity: 1;
+          }
+          20% {
+            transform: translateY(-25vh) translateX(calc(var(--drift) * 0.2)) scale(0.8);
+          }
+          50% {
+            transform: translateY(-55vh) translateX(calc(var(--drift) * 0.6)) scale(0.9);
+          }
+          80% {
+            transform: translateY(-95vh) translateX(calc(var(--drift) * 0.9)) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-130vh) translateX(var(--drift)) scale(1);
+            opacity: 0;
+          }
+        }
       `}</style>
     </div>
   )
 }
 
-/** Standalone page wrapper (keeps route working) */
+/** Standalone page wrapper */
 export default function PremiumRevealPage() {
   const { lang = "he" } = useParams()
   const navigate = useNavigate()
 
-  // Prevent iOS bounce
   useEffect(() => {
     const prevent = (e: TouchEvent) => e.preventDefault()
     document.addEventListener("touchmove", prevent, { passive: false })
@@ -425,8 +550,6 @@ export default function PremiumRevealPage() {
   return (
     <div className="fixed inset-0" dir="rtl" style={{ touchAction: "none" }}>
       <PremiumRevealContent onReveal={() => navigate(`/${lang}`)} />
-
-      {/* Close button (standalone only) */}
       <button
         onClick={() => navigate(`/${lang}`)}
         className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full flex items-center justify-center"
@@ -438,7 +561,6 @@ export default function PremiumRevealPage() {
   )
 }
 
-// ── Particle component ──
 function ParticleDot({ p }: { p: Particle }) {
   const ref = useRef<HTMLDivElement>(null)
 
