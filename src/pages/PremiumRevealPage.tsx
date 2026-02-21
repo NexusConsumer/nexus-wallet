@@ -61,60 +61,47 @@ export default function PremiumRevealPage() {
 
   // Reveal track wraps tightly around the cap
   const revealW = CAP_SIZE + REVEAL_GAP * 2
-  const revealBaseH = Math.round(viewH / 6)
 
   // Container = reveal + border
   const containerW = revealW + TRACK_GAP * 2
 
-  // Container stays at its base height (fixed well at bottom)
-  const containerH = revealBaseH + TRACK_GAP
-  const revealH = revealBaseH
+  // Base container height (initial well)
+  const containerBaseH = Math.round(viewH / 6)
 
-  // Cap position — free to move beyond container
+  // Cap position — grows freely
   const capBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
+
+  // Container grows with cap — always tall enough to contain the cap
+  const revealH = Math.max(containerBaseH, capBottom + CAP_SIZE + CAP_TOP_PAD + REVEAL_GAP)
+  const containerH = revealH + TRACK_GAP
 
   // Gradient reveal fill progress
   const pillProgress = (pillHeight - PILL_MIN) / (PILL_MAX - PILL_MIN)
 
-  // ── Phase detection ──
-  // Cap top edge (from bottom of screen)
+  // ── Container gradient fill ──
+  // Container fills with gradient instantly when cap touches the initial container top
   const capTopFromBottom = capBottom + CAP_SIZE
-
-  // Container top edge (from bottom of screen)
-  const containerTopFromBottom = containerH
-
-  // Phase 1: cap inside container. Phase 2: cap above container (container filled)
-  const capReachedContainerTop = capTopFromBottom + CAP_TOP_PAD >= containerTopFromBottom
-
-  // Container gradient fill: 0→1 as cap approaches container top, stays 1 after
-  const containerFillRaw = capReachedContainerTop
-    ? 1
-    : Math.max(0, (capTopFromBottom + CAP_TOP_PAD) / containerTopFromBottom)
-  const containerFill = Math.min(1, containerFillRaw)
+  const initialContainerTop = containerBaseH + TRACK_GAP
+  const containerFilled = capTopFromBottom + CAP_TOP_PAD >= initialContainerTop
 
   // ── Logo transfer to cap ──
-  // Logo center is at viewH / 2 from top = viewH / 2 from bottom (measured from bottom)
   const logoCenterFromBottom = viewH / 2
-  // Cap center from bottom
   const capCenterFromBottom = capBottom + CAP_SIZE / 2
-  // Logo position: if on cap, follow cap; otherwise, stay centered
-  // When on cap: bottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2, centered horizontally
-  // Smooth transition: blend between fixed center and cap-riding
-  const logoTransitionStart = logoCenterFromBottom - LOGO_SIZE // start blending earlier
+
+  // Blend: 0 = logo at screen center, 1 = logo on cap
+  const logoTransitionStart = logoCenterFromBottom - LOGO_SIZE * 1.5
+  const logoTransitionEnd = logoCenterFromBottom - LOGO_SIZE * 0.3
   const logoBlend = Math.min(1, Math.max(0,
-    (capCenterFromBottom - logoTransitionStart) / (logoCenterFromBottom - LOGO_SIZE / 2 - logoTransitionStart),
+    (capCenterFromBottom - logoTransitionStart) / (logoTransitionEnd - logoTransitionStart),
   ))
 
-  // Logo bottom when riding on cap
-  const logoOnCapBottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2
-  // Logo bottom when centered on screen
+  // Logo bottom: interpolate between centered and on-cap
   const logoCenteredBottom = viewH / 2 - LOGO_SIZE / 2
-  // Interpolated logo bottom
+  const logoOnCapBottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2
   const logoBottom = logoCenteredBottom + (logoOnCapBottom - logoCenteredBottom) * logoBlend
 
-  // Logo scale: shrink slightly to fit on cap (72 → ~36px on the cap)
-  const logoCapScale = (CAP_SIZE * 0.47) / LOGO_SIZE // ~0.5
-  const logoScale = 1 + (logoCapScale - 1) * logoBlend
+  // Arrow opacity: fade out as logo lands on cap
+  const arrowOpacity = 1 - logoBlend
 
   // ── Drag handlers ──
   const handlePointerDown = useCallback(
@@ -230,7 +217,7 @@ export default function PremiumRevealPage() {
         }}
       />
 
-      {/* Container track — fixed height well at bottom, fills with gradient when cap exits */}
+      {/* Container track — grows with cap, fills with gradient */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[15] pointer-events-none"
         style={{
@@ -240,21 +227,21 @@ export default function PremiumRevealPage() {
           background: DARK_COLOR,
           overflow: "hidden",
           opacity: revealed ? 0 : 1,
-          transition: "opacity 0.4s",
+          transition: revealed ? "opacity 0.4s" : isDragging ? "opacity 0.4s" : "height 0.3s ease-out, opacity 0.4s",
         }}
       >
-        {/* Gradient fill inside container — grows as cap approaches top */}
+        {/* Gradient fill — instant fill when cap reaches container top */}
         <div
-          className="absolute left-0 right-0 bottom-0"
+          className="absolute inset-0"
           style={{
-            height: `${Math.min(100, containerFill * 100)}%`,
             background: "linear-gradient(180deg, rgba(216,129,244,0.9), rgba(128,222,234,0.7), rgba(255,213,79,0.8), rgba(244,143,177,0.9))",
-            transition: isDragging ? "none" : "height 0.3s ease-out",
+            opacity: containerFilled ? 1 : 0,
+            transition: "opacity 0.3s ease-out",
           }}
         />
       </div>
 
-      {/* Reveal track — wraps cap tightly, visible gradient halo around cap */}
+      {/* Reveal track — wraps cap tightly, gradient halo */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[16] pointer-events-none"
         style={{
@@ -264,10 +251,10 @@ export default function PremiumRevealPage() {
           background: DARK_COLOR,
           overflow: "hidden",
           opacity: revealed ? 0 : 1,
-          transition: "opacity 0.4s",
+          transition: revealed ? "opacity 0.4s" : isDragging ? "opacity 0.4s" : "height 0.3s ease-out, opacity 0.4s",
         }}
       >
-        {/* Gradient filling from bottom up as cap rises */}
+        {/* Gradient filling from bottom up */}
         <div
           className="absolute left-0 right-0 bottom-0"
           style={{
@@ -278,7 +265,7 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Logo — starts centered, transfers to cap when cap reaches it */}
+      {/* Logo — starts centered, transfers onto cap (same size), replaces arrow */}
       <div
         className="absolute left-1/2 -translate-x-1/2 z-[35] pointer-events-none"
         style={{
@@ -286,12 +273,11 @@ export default function PremiumRevealPage() {
           height: LOGO_SIZE,
           bottom: logoBottom,
           opacity: revealed ? 0 : 1,
-          transform: `scale(${logoScale})`,
           transition: revealed
             ? "opacity 0.4s"
             : isDragging
               ? "opacity 0.4s"
-              : "bottom 0.3s ease-out, transform 0.3s ease-out, opacity 0.4s",
+              : "bottom 0.3s ease-out, opacity 0.4s",
         }}
       >
         <img
@@ -333,7 +319,17 @@ export default function PremiumRevealPage() {
             background: BG_COLOR,
           }}
         >
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+          {/* Arrow — fades out as logo arrives */}
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 20 20"
+            fill="none"
+            style={{
+              opacity: arrowOpacity,
+              transition: isDragging ? "none" : "opacity 0.3s ease-out",
+            }}
+          >
             <path
               d="M10 15V5M10 5L5 10M10 5L15 10"
               stroke="white"
