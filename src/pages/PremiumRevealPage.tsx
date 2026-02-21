@@ -3,8 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 // ── Constants ──
-const BG_COLOR = "#0F3460"
-const CONTAINER_COLOR = "#1A4A7A" // lighter shade for depth
+const BG_COLOR = "#1A4A7A" // screen background — lighter blue
+const DARK_COLOR = "#0A2540" // container + cap — darker blue (depth)
 const CAP_SIZE = 76
 const CAP_TOP_PAD = 8
 const TRACK_GAP = 3
@@ -205,28 +205,27 @@ export default function PremiumRevealPage() {
         }}
       />
 
-      {/* Container track — lighter ring for depth (gradient shows through center) */}
+      {/* Container track — dark, creates depth illusion */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[6] pointer-events-none"
         style={{
           width: containerW,
           height: containerH,
           borderRadius: `${containerW / 2}px ${containerW / 2}px 0 0`,
-          border: `${TRACK_GAP}px solid ${CONTAINER_COLOR}`,
-          borderBottom: "none",
-          boxSizing: "border-box",
+          background: DARK_COLOR,
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
         }}
       />
 
-      {/* Reveal track — ring around cap, fills with gradient as cap rises */}
+      {/* Reveal track — wraps cap, starts dark, fills with gradient as cap rises */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[7] pointer-events-none"
         style={{
           width: revealW,
           height: revealH,
           borderRadius: `${revealW / 2}px ${revealW / 2}px 0 0`,
+          background: DARK_COLOR,
           overflow: "hidden",
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
@@ -237,13 +236,13 @@ export default function PremiumRevealPage() {
           className="absolute left-0 right-0 bottom-0"
           style={{
             height: `${Math.min(100, pillProgress * 110)}%`,
-            background: "linear-gradient(180deg, rgba(216,129,244,0.7), rgba(128,222,234,0.5), rgba(255,213,79,0.6), rgba(244,143,177,0.7))",
+            background: "linear-gradient(180deg, rgba(216,129,244,0.8), rgba(128,222,234,0.6), rgba(255,213,79,0.7), rgba(244,143,177,0.8))",
             transition: isDragging ? "none" : "height 0.3s ease-out",
           }}
         />
       </div>
 
-      {/* Logo — centered, white */}
+      {/* Logo — centered, dark (same color as container) */}
       <div
         className="absolute inset-0 flex items-center justify-center z-20"
         style={{
@@ -259,7 +258,6 @@ export default function PremiumRevealPage() {
             width: 72,
             height: 72,
             objectFit: "contain",
-            filter: "invert(1) drop-shadow(0 4px 20px rgba(255,255,255,0.3))",
           }}
         />
       </div>
@@ -272,7 +270,7 @@ export default function PremiumRevealPage() {
           height: CAP_SIZE,
           bottom: capBottom,
           borderRadius: "50%",
-          background: BG_COLOR,
+          background: DARK_COLOR,
           boxShadow: "0 0 12px 2px rgba(0,0,0,0.3)",
           cursor: revealed ? "default" : "grab",
           touchAction: "none",
