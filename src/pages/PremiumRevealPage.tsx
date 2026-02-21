@@ -252,20 +252,20 @@ export default function PremiumRevealPage() {
             width: 72,
             height: 72,
             objectFit: "contain",
+            filter: "brightness(0) invert(10%) sepia(80%) saturate(600%) hue-rotate(185deg)",
           }}
         />
       </div>
 
-      {/* Cap button — innermost, BG_COLOR (lighter blue, matches screen) */}
+      {/* Cap button — gradient ring wrapper + inner cap */}
       <div
         className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center justify-center"
         style={{
-          width: CAP_SIZE,
-          height: CAP_SIZE,
-          bottom: capBottom,
+          width: CAP_SIZE + 6,
+          height: CAP_SIZE + 6,
+          bottom: capBottom - 3, // offset by ring thickness so cap center stays same
           borderRadius: "50%",
-          background: BG_COLOR,
-          boxShadow: "0 0 12px 2px rgba(0,0,0,0.3)",
+          background: "conic-gradient(#d881f4, #80deea, #ffd54f, #f48fb1, #b39ddb, #d881f4)",
           cursor: revealed ? "default" : "grab",
           touchAction: "none",
           opacity: revealed ? 0 : 1,
@@ -275,15 +275,25 @@ export default function PremiumRevealPage() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-          <path
-            d="M10 15V5M10 5L5 10M10 5L15 10"
-            stroke="white"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <div
+          className="flex items-center justify-center"
+          style={{
+            width: CAP_SIZE,
+            height: CAP_SIZE,
+            borderRadius: "50%",
+            background: BG_COLOR,
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M10 15V5M10 5L5 10M10 5L15 10"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
       </div>
 
       {/* Flash overlay */}
