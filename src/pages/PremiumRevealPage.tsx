@@ -6,7 +6,8 @@ import { useNavigate, useParams } from "react-router-dom"
 const BG_COLOR = "#0F3460"
 const CAP_SIZE = 76
 const CAP_TOP_PAD = 8
-const PILL_MIN = CAP_TOP_PAD + CAP_SIZE + 20
+const TRACK_GAP = 3 // gap between container track and reveal track
+const PILL_MIN = CAP_TOP_PAD + CAP_SIZE / 2 // cap starts half-cut by screen bottom
 const TRIGGER = 0.88
 
 const PARTICLE_COLORS = [
@@ -25,18 +26,17 @@ interface Particle {
 /**
  * Builds a clip-path covering the whole viewport except a track-shaped
  * cutout at the bottom center (rounded top, straight sides and bottom).
+ * This is the OUTER container track.
  */
 function buildOverlayClip(
-  vw: number, vh: number, trackW: number, trackH: number,
+  vw: number, vh: number, containerW: number, containerH: number,
 ): string {
   const cx = vw / 2
-  const left = cx - trackW / 2
-  const right = cx + trackW / 2
-  const top = vh - trackH
-  const r = trackW / 2 // semicircle radius = half the track width
+  const left = cx - containerW / 2
+  const right = cx + containerW / 2
+  const top = vh - containerH
+  const r = containerW / 2
 
-  // Outer rect (CW) + inner cutout (CCW) with arc top
-  // The inner path: start bottom-left, go up left side, arc across top, down right side, close bottom
   return `path(evenodd, "M0,0 L${vw},0 L${vw},${vh} L0,${vh} Z M${left},${vh} L${left},${top + r} A${r},${r} 0 0,1 ${right},${top + r} L${right},${vh} Z")`
 }
 
@@ -64,7 +64,11 @@ export default function PremiumRevealPage() {
   const PILL_MAX = viewH * 0.88
   const sliderWidth = Math.max(Math.round(viewW * 0.25), CAP_SIZE + 16)
   const trackBaseH = Math.round(viewH / 6)
-  const trackH = Math.max(trackBaseH, pillHeight + CAP_TOP_PAD)
+  const revealH = Math.max(trackBaseH, pillHeight + CAP_TOP_PAD)
+
+  // Container track = reveal track + gap on each side
+  const containerW = sliderWidth + TRACK_GAP * 2
+  const containerH = revealH + TRACK_GAP
 
   // ── Drag handlers ──
   const handlePointerDown = useCallback(
@@ -167,12 +171,25 @@ export default function PremiumRevealPage() {
         </div>
       </div>
 
-      {/* Layer 1 — Dark blue overlay with rounded track cutout */}
+      {/* Layer 1 — Dark blue overlay with outer container cutout */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
           background: BG_COLOR,
-          clipPath: buildOverlayClip(viewW, viewH, sliderWidth, trackH),
+          clipPath: buildOverlayClip(viewW, viewH, containerW, containerH),
+          opacity: revealed ? 0 : 1,
+          transition: "opacity 0.4s",
+        }}
+      />
+
+      {/* Inner reveal track — same shape, slightly smaller, with gap showing gradient between */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[8] pointer-events-none"
+        style={{
+          width: sliderWidth,
+          height: revealH,
+          borderRadius: `${sliderWidth / 2}px ${sliderWidth / 2}px 0 0`,
+          background: BG_COLOR,
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
         }}
@@ -194,51 +211,39 @@ export default function PremiumRevealPage() {
             width: 72,
             height: 72,
             objectFit: "contain",
-            filter: "drop-shadow(0 4px 20px rgba(0,0,0,0.15))",
+            filter: "invert(1) drop-shadow(0 4px 20px rgba(255,255,255,0.3))",
           }}
         />
       </div>
 
-      {/* Slider track + cap */}
+      {/* Cap button — draggable, starts half-cut by screen bottom */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 z-30"
+        className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center justify-center"
         style={{
-          width: sliderWidth,
-          height: pillHeight,
-          bottom: 0,
-          borderRadius: `${sliderWidth / 2}px ${sliderWidth / 2}px 0 0`,
-          overflow: "hidden",
+          width: CAP_SIZE,
+          height: CAP_SIZE,
+          bottom: pillHeight - PILL_MIN - CAP_SIZE / 2,
+          borderRadius: "50%",
+          background: BG_COLOR,
+          boxShadow: "0 0 12px 2px rgba(0,0,0,0.3)",
           cursor: revealed ? "default" : "grab",
           touchAction: "none",
-          transition: isDragging ? "none" : "height 0.3s ease-out, opacity 0.4s",
           opacity: revealed ? 0 : 1,
+          transition: isDragging ? "opacity 0.4s" : "bottom 0.3s ease-out, opacity 0.4s",
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {/* Cap circle */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
-          style={{
-            top: CAP_TOP_PAD,
-            width: CAP_SIZE,
-            height: CAP_SIZE,
-            borderRadius: "50%",
-            background: BG_COLOR,
-            boxShadow: "0 0 12px 2px rgba(0,0,0,0.3)",
-          }}
-        >
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M10 15V5M10 5L5 10M10 5L15 10"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M10 15V5M10 5L5 10M10 5L15 10"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
 
       {/* Flash overlay */}
