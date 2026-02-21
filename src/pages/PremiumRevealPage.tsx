@@ -11,6 +11,8 @@ const TRACK_GAP = 3
 const REVEAL_GAP = 4 // gap between cap and reveal track inner wall
 const PILL_MIN = CAP_TOP_PAD + CAP_SIZE / 2
 const TRIGGER = 0.88
+const LOGO_SIZE = 72
+const RING_THICKNESS = 3
 
 const PARTICLE_COLORS = [
   "#d881f4", "#80deea", "#ffd54f", "#f48fb1",
@@ -33,7 +35,6 @@ export default function PremiumRevealPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [showFlash, setShowFlash] = useState(false)
-  const [logoOut, setLogoOut] = useState(false)
   const [ripples, setRipples] = useState<number[]>([])
   const [particles, setParticles] = useState<Particle[]>([])
   const [viewH, setViewH] = useState(800)
@@ -65,24 +66,55 @@ export default function PremiumRevealPage() {
   // Container = reveal + border
   const containerW = revealW + TRACK_GAP * 2
 
-  // Clamp pillHeight so cap never exceeds container
-  // capBottom = pillHeight - PILL_MIN - CAP_SIZE/2
-  // We need capBottom + CAP_SIZE + CAP_TOP_PAD <= containerH
-  // containerH = revealH + TRACK_GAP
-  // revealH grows with capBottom, so we need an explicit max
-  const maxContainerH = viewH * 0.92 // container can't be taller than 92% of screen
+  // Container stays at its base height (fixed well at bottom)
+  const containerH = revealBaseH + TRACK_GAP
+  const revealH = revealBaseH
 
-  // Cap position (clamped)
-  const rawCapBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
-  const maxCapBottom = maxContainerH - TRACK_GAP - CAP_SIZE - CAP_TOP_PAD - REVEAL_GAP
-  const capBottom = Math.min(rawCapBottom, maxCapBottom)
-
-  // Reveal track height grows with cap position
-  const revealH = Math.max(revealBaseH, capBottom + CAP_SIZE + CAP_TOP_PAD + REVEAL_GAP)
-  const containerH = revealH + TRACK_GAP
+  // Cap position — free to move beyond container
+  const capBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
 
   // Gradient reveal fill progress
   const pillProgress = (pillHeight - PILL_MIN) / (PILL_MAX - PILL_MIN)
+
+  // ── Phase detection ──
+  // Cap top edge (from bottom of screen)
+  const capTopFromBottom = capBottom + CAP_SIZE
+
+  // Container top edge (from bottom of screen)
+  const containerTopFromBottom = containerH
+
+  // Phase 1: cap inside container. Phase 2: cap above container (container filled)
+  const capReachedContainerTop = capTopFromBottom + CAP_TOP_PAD >= containerTopFromBottom
+
+  // Container gradient fill: 0→1 as cap approaches container top, stays 1 after
+  const containerFillRaw = capReachedContainerTop
+    ? 1
+    : Math.max(0, (capTopFromBottom + CAP_TOP_PAD) / containerTopFromBottom)
+  const containerFill = Math.min(1, containerFillRaw)
+
+  // ── Logo transfer to cap ──
+  // Logo center is at viewH / 2 from top = viewH / 2 from bottom (measured from bottom)
+  const logoCenterFromBottom = viewH / 2
+  // Cap center from bottom
+  const capCenterFromBottom = capBottom + CAP_SIZE / 2
+  // Logo position: if on cap, follow cap; otherwise, stay centered
+  // When on cap: bottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2, centered horizontally
+  // Smooth transition: blend between fixed center and cap-riding
+  const logoTransitionStart = logoCenterFromBottom - LOGO_SIZE // start blending earlier
+  const logoBlend = Math.min(1, Math.max(0,
+    (capCenterFromBottom - logoTransitionStart) / (logoCenterFromBottom - LOGO_SIZE / 2 - logoTransitionStart),
+  ))
+
+  // Logo bottom when riding on cap
+  const logoOnCapBottom = capBottom + (CAP_SIZE - LOGO_SIZE) / 2
+  // Logo bottom when centered on screen
+  const logoCenteredBottom = viewH / 2 - LOGO_SIZE / 2
+  // Interpolated logo bottom
+  const logoBottom = logoCenteredBottom + (logoOnCapBottom - logoCenteredBottom) * logoBlend
+
+  // Logo scale: shrink slightly to fit on cap (72 → ~36px on the cap)
+  const logoCapScale = (CAP_SIZE * 0.47) / LOGO_SIZE // ~0.5
+  const logoScale = 1 + (logoCapScale - 1) * logoBlend
 
   // ── Drag handlers ──
   const handlePointerDown = useCallback(
@@ -123,7 +155,6 @@ export default function PremiumRevealPage() {
   // ── Reveal sequence ──
   const triggerReveal = useCallback(() => {
     setRevealed(true)
-    setLogoOut(true)
 
     setTimeout(() => {
       setShowFlash(true)
@@ -189,7 +220,7 @@ export default function PremiumRevealPage() {
         </div>
       </div>
 
-      {/* Layer 1 — Solid overlay covers entire screen (no clip-path!) */}
+      {/* Layer 1 — Solid overlay covers entire screen */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
@@ -199,7 +230,7 @@ export default function PremiumRevealPage() {
         }}
       />
 
-      {/* Container track — dark, outer shell, creates depth illusion */}
+      {/* Container track — fixed height well at bottom, fills with gradient when cap exits */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[15] pointer-events-none"
         style={{
@@ -207,12 +238,23 @@ export default function PremiumRevealPage() {
           height: containerH,
           borderRadius: `${containerW / 2}px ${containerW / 2}px 0 0`,
           background: DARK_COLOR,
+          overflow: "hidden",
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
         }}
-      />
+      >
+        {/* Gradient fill inside container — grows as cap approaches top */}
+        <div
+          className="absolute left-0 right-0 bottom-0"
+          style={{
+            height: `${Math.min(100, containerFill * 100)}%`,
+            background: "linear-gradient(180deg, rgba(216,129,244,0.9), rgba(128,222,234,0.7), rgba(255,213,79,0.8), rgba(244,143,177,0.9))",
+            transition: isDragging ? "none" : "height 0.3s ease-out",
+          }}
+        />
+      </div>
 
-      {/* Reveal track — wraps cap tightly, starts dark, fills with gradient as cap rises */}
+      {/* Reveal track — wraps cap tightly, visible gradient halo around cap */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[16] pointer-events-none"
         style={{
@@ -236,21 +278,28 @@ export default function PremiumRevealPage() {
         />
       </div>
 
-      {/* Logo — centered, dark (matches container color) */}
+      {/* Logo — starts centered, transfers to cap when cap reaches it */}
       <div
-        className="absolute inset-0 flex items-center justify-center z-20"
+        className="absolute left-1/2 -translate-x-1/2 z-[35] pointer-events-none"
         style={{
-          opacity: logoOut ? 0 : 1,
-          transform: logoOut ? "scale(0.9)" : "scale(1)",
-          transition: "all 0.5s ease-out",
+          width: LOGO_SIZE,
+          height: LOGO_SIZE,
+          bottom: logoBottom,
+          opacity: revealed ? 0 : 1,
+          transform: `scale(${logoScale})`,
+          transition: revealed
+            ? "opacity 0.4s"
+            : isDragging
+              ? "opacity 0.4s"
+              : "bottom 0.3s ease-out, transform 0.3s ease-out, opacity 0.4s",
         }}
       >
         <img
           src="/nexus-icon.png"
           alt="Nexus"
           style={{
-            width: 72,
-            height: 72,
+            width: "100%",
+            height: "100%",
             objectFit: "contain",
             filter: "brightness(0) invert(10%) sepia(80%) saturate(600%) hue-rotate(185deg)",
           }}
@@ -261,9 +310,9 @@ export default function PremiumRevealPage() {
       <div
         className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center justify-center"
         style={{
-          width: CAP_SIZE + 6,
-          height: CAP_SIZE + 6,
-          bottom: capBottom - 3, // offset by ring thickness so cap center stays same
+          width: CAP_SIZE + RING_THICKNESS * 2,
+          height: CAP_SIZE + RING_THICKNESS * 2,
+          bottom: capBottom - RING_THICKNESS,
           borderRadius: "50%",
           background: "conic-gradient(#d881f4, #80deea, #ffd54f, #f48fb1, #b39ddb, #d881f4)",
           cursor: revealed ? "default" : "grab",
