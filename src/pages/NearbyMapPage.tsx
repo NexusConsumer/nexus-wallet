@@ -203,15 +203,24 @@ export default function NearbyMapPage() {
       <motion.div
         initial={{ opacity: 0, y: 40, scale: 0.92 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
+        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
         className="relative z-10"
       >
+        {/* Subtle pill glow behind phone */}
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[90px] z-0"
-          style={{ width: 280, height: 420, background: "rgba(99,91,255,0.12)", filter: "blur(50px)" }}
+          style={{
+            width: 280,
+            height: 400,
+            background: "rgba(99, 91, 255, 0.15)",
+            filter: "blur(40px)",
+          }}
         />
 
-        <div
+        {/* Phone frame */}
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
           className="relative z-10"
           style={{
             width: 260,
@@ -223,12 +232,25 @@ export default function NearbyMapPage() {
             boxShadow: "0 30px 80px rgba(7,10,20,0.35)",
           }}
         >
+          {/* Inner frame highlight */}
           <div
             className="absolute pointer-events-none"
-            style={{ inset: 7, borderRadius: 29, border: "1px solid rgba(255,255,255,0.08)" }}
+            style={{
+              inset: 7,
+              borderRadius: 29,
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
           />
 
-          <div className="w-full h-full relative overflow-hidden" style={{ borderRadius: 28 }}>
+          {/* Screen — clip map content to rounded corners */}
+          <div
+            className="w-full h-full relative overflow-hidden"
+            style={{
+              borderRadius: 28,
+              WebkitMaskImage: "radial-gradient(white, white)",
+              maskImage: "radial-gradient(white, white)",
+            }}
+          >
             {/* Notch */}
             <div
               className="absolute top-2 left-1/2 -translate-x-1/2 z-30"
@@ -319,7 +341,7 @@ export default function NearbyMapPage() {
               נציג לך איפה ההטבות הכי שוות מסביבך בכל רגע נתון
             </motion.div>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
 
       <style>{`
