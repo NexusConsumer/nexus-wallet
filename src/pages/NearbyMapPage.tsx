@@ -1,13 +1,36 @@
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { useEffect, useRef, useState } from "react"
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet"
+import L from "leaflet"
+import "leaflet/dist/leaflet.css"
 
-// ── Brand offer bubbles along the route ──
+// ── Real Tel Aviv coordinates ──
+// User location: Rothschild Blvd & Allenby
+const USER_LATLNG: [number, number] = [32.0636, 34.7721]
+// Destination: Dizengoff Center area
+const DEST_LATLNG: [number, number] = [32.0753, 34.7748]
+
+// Route that follows real streets: Rothschild → Allenby → King George → Dizengoff
+const ROUTE_COORDS: [number, number][] = [
+  [32.0636, 34.7721], // Start: Rothschild & Allenby
+  [32.0648, 34.7710], // Allenby heading NW
+  [32.0659, 34.7700], // Allenby & Bialik
+  [32.0671, 34.7693], // Allenby continues
+  [32.0682, 34.7688], // Near Magen David Square
+  [32.0693, 34.7705], // King George heading north
+  [32.0708, 34.7718], // King George continues
+  [32.0722, 34.7730], // King George & Ben Zion
+  [32.0735, 34.7740], // Approaching Dizengoff
+  [32.0753, 34.7748], // Destination: Dizengoff Center
+]
+
+// Brand offers with real locations along the route
 const routeOffers = [
-  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", x: 28, y: 62 },
-  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", x: 38, y: 52 },
-  { brand: "Rami Levy",      logo: "/brands/rami-levy.png",      discount: "10%", x: 50, y: 42 },
-  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", x: 62, y: 34 },
-  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", x: 72, y: 26 },
+  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", latlng: [32.0655, 34.7703] as [number, number] },
+  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", latlng: [32.0678, 34.7690] as [number, number] },
+  { brand: "Rami Levy",      logo: "/brands/rami-levy.png",      discount: "10%", latlng: [32.0700, 34.7710] as [number, number] },
+  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", latlng: [32.0725, 34.7733] as [number, number] },
+  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", latlng: [32.0748, 34.7745] as [number, number] },
 ]
 
 // Preload logos
@@ -15,53 +38,127 @@ if (typeof window !== "undefined") {
   routeOffers.forEach(({ logo }) => { const i = new Image(); i.src = logo })
 }
 
-// Map tile — CARTO Voyager, Tel Aviv, zoom 15
-const MAP_TILE = "https://a.basemaps.cartocdn.com/rastertiles/voyager/15/19837/13514@2x.png"
+// ── Leaflet custom icons ──
+const userIcon = L.divIcon({
+  className: "",
+  html: `<div style="position:relative;width:20px;height:20px;">
+    <div style="position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(99,91,255,0.4);animation:nearbyPulse 2s ease-out infinite;"></div>
+    <div style="position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(99,91,255,0.3);animation:nearbyPulse 2s ease-out infinite 1s;"></div>
+    <div style="width:20px;height:20px;background:#635bff;border:3px solid white;border-radius:50%;box-shadow:0 2px 10px rgba(99,91,255,0.5);position:relative;z-index:2;"></div>
+  </div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+})
 
-// User dot position (%)
-const USER_POS = { x: 18, y: 72 }
-// Destination pin position (%)
-const PIN_POS = { x: 78, y: 20 }
+const destIcon = L.divIcon({
+  className: "",
+  html: `<svg width="28" height="40" viewBox="0 0 24 34" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">
+    <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 22 12 22s12-13 12-22C24 5.4 18.6 0 12 0z" fill="#ef4444"/>
+    <circle cx="12" cy="12" r="5" fill="white"/>
+  </svg>`,
+  iconSize: [28, 40],
+  iconAnchor: [14, 40],
+})
+
+function createOfferIcon(logo: string, discount: string) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="position:relative;animation:nearbyBubblePop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;">
+      <div style="width:40px;height:40px;border-radius:50%;background:white;box-shadow:0 4px 14px rgba(0,0,0,0.2);border:2px solid white;display:flex;align-items:center;justify-content:center;">
+        <img src="${logo}" style="width:24px;height:24px;object-fit:contain;" />
+      </div>
+      <div style="position:absolute;top:-6px;right:-12px;background:#635bff;color:white;font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 6px rgba(99,91,255,0.4);">
+        ${discount}
+      </div>
+    </div>`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+  })
+}
+
+// ── Animated route component — draws the polyline segment by segment ──
+function AnimatedRoute({ coords, show }: { coords: [number, number][]; show: boolean }) {
+  const [visibleCount, setVisibleCount] = useState(0)
+
+  useEffect(() => {
+    if (!show) { setVisibleCount(0); return }
+    setVisibleCount(0)
+    const timers: ReturnType<typeof setTimeout>[] = []
+    coords.forEach((_, i) => {
+      timers.push(setTimeout(() => setVisibleCount(i + 1), i * 120))
+    })
+    return () => timers.forEach(clearTimeout)
+  }, [show, coords])
+
+  if (visibleCount < 2) return null
+
+  return (
+    <Polyline
+      positions={coords.slice(0, visibleCount)}
+      pathOptions={{
+        color: "#635bff",
+        weight: 4,
+        opacity: 0.85,
+        dashArray: "8 6",
+        lineCap: "round",
+        lineJoin: "round",
+      }}
+    />
+  )
+}
+
+// ── Disable map interactions ──
+function DisableInteractions() {
+  const map = useMap()
+  useEffect(() => {
+    map.dragging.disable()
+    map.touchZoom.disable()
+    map.doubleClickZoom.disable()
+    map.scrollWheelZoom.disable()
+    map.boxZoom.disable()
+    map.keyboard.disable()
+    if ((map as unknown as Record<string, unknown>).tap) (map as unknown as Record<string, { disable: () => void }>).tap.disable()
+  }, [map])
+  return null
+}
 
 export default function NearbyMapPage() {
-  const [phase, setPhase] = useState(0) // 0=idle, 1=dot, 2=pin, 3=route, 4=bubbles, 5=hold
+  const [phase, setPhase] = useState(0)
   const [visibleBubbles, setVisibleBubbles] = useState(0)
   const [loopKey, setLoopKey] = useState(0)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
     const t = timersRef.current
-    // Clear previous
     t.forEach(clearTimeout)
     t.length = 0
 
-    // Reset
     setPhase(0)
     setVisibleBubbles(0)
 
-    // Animation sequence
-    t.push(setTimeout(() => setPhase(1), 300))    // dot
-    t.push(setTimeout(() => setPhase(2), 1200))   // pin
-    t.push(setTimeout(() => setPhase(3), 2000))   // route
-    t.push(setTimeout(() => setPhase(4), 3200))   // bubbles start
+    t.push(setTimeout(() => setPhase(1), 400))    // user dot
+    t.push(setTimeout(() => setPhase(2), 1400))   // dest pin
+    t.push(setTimeout(() => setPhase(3), 2200))   // route draws
+    t.push(setTimeout(() => setPhase(4), 3600))   // bubbles start
 
-    // Stagger bubbles
     routeOffers.forEach((_, i) => {
-      t.push(setTimeout(() => setVisibleBubbles(i + 1), 3200 + i * 400))
+      t.push(setTimeout(() => setVisibleBubbles(i + 1), 3600 + i * 500))
     })
 
-    t.push(setTimeout(() => setPhase(5), 5500))   // hold
+    t.push(setTimeout(() => setPhase(5), 6500))
 
-    // Fade out and restart
     t.push(setTimeout(() => {
       setPhase(0)
       setVisibleBubbles(0)
-      // Trigger remount for fresh animation
-      setTimeout(() => setLoopKey((k) => k + 1), 500)
-    }, 7500))
+      setTimeout(() => setLoopKey((k) => k + 1), 600)
+    }, 8500))
 
     return () => { t.forEach(clearTimeout); t.length = 0 }
   }, [loopKey])
+
+  // Center the map between user and destination
+  const centerLat = (USER_LATLNG[0] + DEST_LATLNG[0]) / 2
+  const centerLng = (USER_LATLNG[1] + DEST_LATLNG[1]) / 2
 
   return (
     <div
@@ -97,12 +194,11 @@ export default function NearbyMapPage() {
         transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
         className="relative z-10"
       >
-        {/* Subtle glow behind phone */}
+        {/* Glow behind phone */}
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[90px] z-0"
           style={{
-            width: 280,
-            height: 420,
+            width: 280, height: 420,
             background: "rgba(99, 91, 255, 0.12)",
             filter: "blur(50px)",
           }}
@@ -124,11 +220,7 @@ export default function NearbyMapPage() {
           {/* Inner frame highlight */}
           <div
             className="absolute pointer-events-none"
-            style={{
-              inset: 7,
-              borderRadius: 29,
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
+            style={{ inset: 7, borderRadius: 29, border: "1px solid rgba(255,255,255,0.08)" }}
           />
 
           {/* Screen */}
@@ -140,8 +232,7 @@ export default function NearbyMapPage() {
             <div
               className="absolute top-2 left-1/2 -translate-x-1/2 z-30"
               style={{
-                width: 100,
-                height: 22,
+                width: 100, height: 22,
                 background: "rgba(0,0,0,0.55)",
                 border: "1px solid rgba(255,255,255,0.06)",
                 borderRadius: "0 0 14px 14px",
@@ -149,182 +240,45 @@ export default function NearbyMapPage() {
               }}
             />
 
-            {/* Map background */}
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url("${MAP_TILE}")`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                filter: "saturate(0.3) brightness(1.05)",
-              }}
-            />
+            {/* Real Leaflet map */}
+            <div className="absolute inset-0 z-0">
+              <MapContainer
+                key={loopKey}
+                center={[centerLat, centerLng]}
+                zoom={14}
+                className="w-full h-full"
+                zoomControl={false}
+                attributionControl={false}
+              >
+                <DisableInteractions />
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                  subdomains="abcd"
+                  maxZoom={20}
+                />
 
-            {/* Slow zoom animation on map */}
-            <motion.div
-              animate={{ scale: [1, 1.06, 1] }}
-              transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url("${MAP_TILE}")`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                filter: "saturate(0.3) brightness(1.05)",
-              }}
-            />
-
-            {/* ── Animated overlays ── */}
-            <div className="absolute inset-0 z-10">
-              {/* User location dot */}
-              <AnimatePresence>
+                {/* User marker */}
                 {phase >= 1 && (
-                  <motion.div
-                    key={`dot-${loopKey}`}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                    className="absolute"
-                    style={{ left: `${USER_POS.x}%`, top: `${USER_POS.y}%`, transform: "translate(-50%, -50%)" }}
-                  >
-                    {/* Ripple rings */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div
-                        className="absolute rounded-full"
-                        style={{
-                          width: 40, height: 40,
-                          border: "2px solid rgba(99,91,255,0.4)",
-                          animation: "nearbyPulse 2s ease-out infinite",
-                          marginLeft: -13, marginTop: -13,
-                        }}
-                      />
-                      <div
-                        className="absolute rounded-full"
-                        style={{
-                          width: 40, height: 40,
-                          border: "2px solid rgba(99,91,255,0.3)",
-                          animation: "nearbyPulse 2s ease-out infinite 1s",
-                          marginLeft: -13, marginTop: -13,
-                        }}
-                      />
-                    </div>
-                    {/* Core dot */}
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: 14, height: 14,
-                        background: "#635bff",
-                        border: "3px solid white",
-                        boxShadow: "0 2px 10px rgba(99,91,255,0.5)",
-                      }}
-                    />
-                  </motion.div>
+                  <Marker position={USER_LATLNG} icon={userIcon} />
                 )}
-              </AnimatePresence>
 
-              {/* Destination pin */}
-              <AnimatePresence>
+                {/* Destination pin */}
                 {phase >= 2 && (
-                  <motion.div
-                    key={`pin-${loopKey}`}
-                    initial={{ y: -40, scale: 0, opacity: 0 }}
-                    animate={{ y: 0, scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 12 }}
-                    className="absolute"
-                    style={{ left: `${PIN_POS.x}%`, top: `${PIN_POS.y}%`, transform: "translate(-50%, -100%)" }}
-                  >
-                    <svg width="24" height="34" viewBox="0 0 24 34">
-                      <path
-                        d="M12 0C5.4 0 0 5.4 0 12c0 9 12 22 12 22s12-13 12-22C24 5.4 18.6 0 12 0z"
-                        fill="#ef4444"
-                      />
-                      <circle cx="12" cy="12" r="5" fill="white" />
-                    </svg>
-                    {/* Pin shadow */}
-                    <div
-                      className="absolute"
-                      style={{
-                        width: 12, height: 4, borderRadius: "50%",
-                        background: "rgba(0,0,0,0.2)",
-                        bottom: -2, left: 6,
-                      }}
-                    />
-                  </motion.div>
+                  <Marker position={DEST_LATLNG} icon={destIcon} />
                 )}
-              </AnimatePresence>
 
-              {/* Route line */}
-              {phase >= 3 && (
-                <svg
-                  key={`route-${loopKey}`}
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  style={{ zIndex: 5 }}
-                >
-                  <path
-                    d={`M${USER_POS.x},${USER_POS.y} C${USER_POS.x + 8},${USER_POS.y - 10} ${routeOffers[1].x - 2},${routeOffers[1].y + 5} ${routeOffers[2].x},${routeOffers[2].y} S${routeOffers[4].x - 5},${routeOffers[4].y + 3} ${PIN_POS.x},${PIN_POS.y}`}
-                    fill="none"
-                    stroke="#635bff"
-                    strokeWidth="0.6"
-                    strokeLinecap="round"
-                    strokeDasharray="200"
-                    strokeDashoffset="200"
-                    style={{ animation: "nearbyRouteDraw 1.2s ease-out forwards" }}
+                {/* Animated route */}
+                <AnimatedRoute coords={ROUTE_COORDS} show={phase >= 3} />
+
+                {/* Brand offer bubbles */}
+                {routeOffers.slice(0, visibleBubbles).map((offer) => (
+                  <Marker
+                    key={`${offer.brand}-${loopKey}`}
+                    position={offer.latlng}
+                    icon={createOfferIcon(offer.logo, offer.discount)}
                   />
-                </svg>
-              )}
-
-              {/* Brand offer bubbles */}
-              {routeOffers.slice(0, visibleBubbles).map((offer, i) => (
-                <motion.div
-                  key={`${offer.brand}-${loopKey}`}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 14, delay: i * 0.05 }}
-                  className="absolute"
-                  style={{
-                    left: `${offer.x}%`,
-                    top: `${offer.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    zIndex: 15,
-                  }}
-                >
-                  {/* White circle with logo */}
-                  <div
-                    className="rounded-full flex items-center justify-center"
-                    style={{
-                      width: 38, height: 38,
-                      background: "white",
-                      boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
-                      border: "2px solid white",
-                    }}
-                  >
-                    <img
-                      src={offer.logo}
-                      alt={offer.brand}
-                      style={{ width: 22, height: 22, objectFit: "contain" }}
-                    />
-                  </div>
-                  {/* Discount badge */}
-                  <div
-                    className="absolute font-bold"
-                    style={{
-                      top: -6, right: -10,
-                      background: "#635bff",
-                      color: "white",
-                      fontSize: 9,
-                      padding: "2px 5px",
-                      borderRadius: 8,
-                      whiteSpace: "nowrap",
-                      boxShadow: "0 2px 6px rgba(99,91,255,0.4)",
-                    }}
-                  >
-                    {offer.discount}
-                  </div>
-                </motion.div>
-              ))}
+                ))}
+              </MapContainer>
             </div>
 
             {/* Bottom caption inside phone */}
@@ -347,16 +301,20 @@ export default function NearbyMapPage() {
         </div>
       </motion.div>
 
-      {/* Keyframe animations */}
+      {/* Keyframe animations for Leaflet markers */}
       <style>{`
         @keyframes nearbyPulse {
           0% { transform: scale(1); opacity: 0.7; }
           100% { transform: scale(3); opacity: 0; }
         }
-        @keyframes nearbyRouteDraw {
-          from { stroke-dashoffset: 200; }
-          to { stroke-dashoffset: 0; }
+        @keyframes nearbyBubblePop {
+          0% { transform: scale(0); opacity: 0; }
+          60% { transform: scale(1.15); opacity: 1; }
+          80% { transform: scale(0.95); }
+          100% { transform: scale(1); opacity: 1; }
         }
+        /* Hide Leaflet default chrome inside the phone */
+        .leaflet-control-attribution { display: none !important; }
       `}</style>
     </div>
   )
