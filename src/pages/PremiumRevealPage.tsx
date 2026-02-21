@@ -205,20 +205,22 @@ export default function PremiumRevealPage() {
         }}
       />
 
-      {/* Container track — lighter shade for depth */}
+      {/* Container track — lighter ring for depth (gradient shows through center) */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[6] pointer-events-none"
         style={{
           width: containerW,
           height: containerH,
           borderRadius: `${containerW / 2}px ${containerW / 2}px 0 0`,
-          background: CONTAINER_COLOR,
+          border: `${TRACK_GAP}px solid ${CONTAINER_COLOR}`,
+          borderBottom: "none",
+          boxSizing: "border-box",
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
         }}
       />
 
-      {/* Reveal track — wraps around cap, fills with gradient as cap rises */}
+      {/* Reveal track — ring around cap, fills with gradient as cap rises */}
       <div
         className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[7] pointer-events-none"
         style={{
@@ -230,8 +232,6 @@ export default function PremiumRevealPage() {
           transition: "opacity 0.4s",
         }}
       >
-        {/* Dark base of reveal track */}
-        <div className="absolute inset-0" style={{ background: BG_COLOR }} />
         {/* Gradient filling from bottom up as cap rises */}
         <div
           className="absolute left-0 right-0 bottom-0"
