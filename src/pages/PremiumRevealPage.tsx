@@ -98,8 +98,8 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
       brand,
       left: Math.random() * 70 + 15,
       size: Math.random() * 30 + 65,
-      duration: Math.random() * 5 + 10,
-      delay: i * 0.4,
+      duration: Math.random() * 3 + 5,
+      delay: i * 0.25,
       drift: (Math.random() - 0.5) * 60,
     }))
     setBubbles(initial)
@@ -113,12 +113,12 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
           brand,
           left: Math.random() * 70 + 15,
           size: Math.random() * 30 + 65,
-          duration: Math.random() * 5 + 10,
+          duration: Math.random() * 3 + 5,
           delay: 0,
           drift: (Math.random() - 0.5) * 60,
         }]
       })
-    }, 1500)
+    }, 800)
 
     return () => clearInterval(interval)
   }, [revealed])
@@ -211,7 +211,7 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
       } else {
         navigate(`/${lang}`)
       }
-    }, 4000)
+    }, 7000)
   }, [lang, navigate, onReveal])
 
   return (
@@ -307,8 +307,8 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-3xl font-bold text-center mb-3"
-          style={{ color: DARK_COLOR }}
+          className="text-2xl font-semibold text-center mb-3"
+          style={{ color: "var(--color-primary)" }}
         >
           הכל מוכן.
         </motion.h1>
@@ -317,7 +317,7 @@ export function PremiumRevealContent({ onReveal }: { onReveal?: () => void }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
           className="text-lg text-center"
-          style={{ color: "#425466" }}
+          style={{ color: "var(--color-primary)", opacity: 0.7 }}
         >
           הצעד הבא שלך מחכה
         </motion.p>
