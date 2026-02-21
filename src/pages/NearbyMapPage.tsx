@@ -63,16 +63,16 @@ const destIcon = L.divIcon({
 function createOfferIcon(logo: string, discount: string) {
   return L.divIcon({
     className: "",
-    html: `<div style="position:relative;animation:nearbyBubblePop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;">
-      <div style="width:40px;height:40px;border-radius:50%;background:white;box-shadow:0 4px 14px rgba(0,0,0,0.2);border:2px solid white;display:flex;align-items:center;justify-content:center;">
-        <img src="${logo}" style="width:24px;height:24px;object-fit:contain;" />
+    html: `<div style="position:relative;width:44px;height:44px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:white;box-shadow:0 4px 16px rgba(0,0,0,0.25);border:2.5px solid white;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <img src="${logo}" style="width:26px;height:26px;object-fit:contain;" />
       </div>
-      <div style="position:absolute;top:-6px;right:-12px;background:#635bff;color:white;font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 6px rgba(99,91,255,0.4);">
+      <div style="position:absolute;top:-8px;right:-14px;background:#635bff;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;white-space:nowrap;box-shadow:0 2px 8px rgba(99,91,255,0.5);line-height:1.4;">
         ${discount}
       </div>
     </div>`,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
+    iconSize: [60, 52],
+    iconAnchor: [22, 22],
   })
 }
 
@@ -306,12 +306,6 @@ export default function NearbyMapPage() {
         @keyframes nearbyPulse {
           0% { transform: scale(1); opacity: 0.7; }
           100% { transform: scale(3); opacity: 0; }
-        }
-        @keyframes nearbyBubblePop {
-          0% { transform: scale(0); opacity: 0; }
-          60% { transform: scale(1.15); opacity: 1; }
-          80% { transform: scale(0.95); }
-          100% { transform: scale(1); opacity: 1; }
         }
         /* Hide Leaflet default chrome inside the phone */
         .leaflet-control-attribution { display: none !important; }
