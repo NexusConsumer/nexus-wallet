@@ -72,19 +72,17 @@ export default function PremiumRevealPage() {
 
   const PILL_MAX = viewH * 0.88
 
-  // Reveal track wraps tightly around the cap
+  // Cap position
+  const capBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
+
+  // Reveal track wraps tightly around the cap (shows gradient halo)
   const revealW = CAP_SIZE + REVEAL_GAP * 2
   const revealBaseH = Math.round(viewH / 6)
-  const capBottom = pillHeight - PILL_MIN - CAP_SIZE / 2
   const revealH = Math.max(revealBaseH, capBottom + CAP_SIZE + CAP_TOP_PAD + REVEAL_GAP)
 
-  // Container track wraps around reveal track
+  // Container = same as reveal + border (no gap between them — seamless)
   const containerW = revealW + TRACK_GAP * 2
   const containerH = revealH + TRACK_GAP
-
-  // Outer "hole in dark overlay" for the container
-  const outerW = containerW + TRACK_GAP * 2
-  const outerH = containerH + TRACK_GAP
 
   // ── Drag handlers ──
   const handlePointerDown = useCallback(
@@ -199,7 +197,7 @@ export default function PremiumRevealPage() {
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
           background: BG_COLOR,
-          clipPath: buildOverlayClip(viewW, viewH, outerW, outerH),
+          clipPath: buildOverlayClip(viewW, viewH, containerW, containerH),
           opacity: revealed ? 0 : 1,
           transition: "opacity 0.4s",
         }}
