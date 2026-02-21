@@ -4,8 +4,9 @@ import { useNavigate, useParams } from "react-router-dom"
 import { SmartInsightsCarousel } from "./InsightsPage"
 import GiftCardsPage from "./GiftCardsPage"
 import WalletCardsPage from "./WalletCardsPage"
+import NearbyMapPage from "./NearbyMapPage"
 
-const STORY_COUNT = 3
+const STORY_COUNT = 4
 const STORY_DURATION = 12000 // ms per story
 
 /** Instagram-style stories with progress bars and tap navigation */
@@ -124,6 +125,7 @@ export default function StoriesPage() {
           )}
           {currentStory === 1 && <GiftCardsPage />}
           {currentStory === 2 && <WalletCardsPage />}
+          {currentStory === 3 && <NearbyMapPage />}
         </motion.div>
       </div>
     </div>
