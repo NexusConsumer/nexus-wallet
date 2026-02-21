@@ -3,11 +3,11 @@ import { useRef, useState } from "react"
 
 // ── Wallet card brands (real partner logos) ──
 const walletCards = [
-  { name: "Golf & Co",       logo: "/brands/golf.png",           bg: "#FFF59D", textDark: true },
-  { name: "American Eagle",  logo: "/brands/american-eagle.png", bg: "#00205B", textDark: false },
-  { name: "Rami Levy",       logo: "/brands/rami-levy.png",      bg: "#B3171D", textDark: false },
-  { name: "Mango",           logo: "/brands/mango.png",          bg: "#000000", textDark: false },
-  { name: "Foot Locker",     logo: "/brands/foot-locker.png",    bg: "#D3D3D3", textDark: true },
+  { name: "Golf & Co",       logo: "/brands/golf.png",           bg: "#FFF59D", textDark: true,  logoW: "w-11", logoMaxH: 28 },
+  { name: "American Eagle",  logo: "/brands/american-eagle.png", bg: "#1a3a7a", textDark: false, logoW: "w-16", logoMaxH: 40 },
+  { name: "Rami Levy",       logo: "/brands/rami-levy.png",      bg: "#B3171D", textDark: false, logoW: "w-16", logoMaxH: 40 },
+  { name: "Mango",           logo: "/brands/mango.png",          bg: "#FFFFFF", textDark: true,  logoW: "w-20", logoMaxH: 48 },
+  { name: "Foot Locker",     logo: "/brands/foot-locker.png",    bg: "#D3D3D3", textDark: true,  logoW: "w-16", logoMaxH: 40 },
 ]
 
 // Preload logos
@@ -205,8 +205,8 @@ export default function WalletCardsPage() {
                       <img
                         src={card.logo}
                         alt={card.name}
-                        className="w-16 h-auto object-contain relative z-[1]"
-                        style={{ maxHeight: 40 }}
+                        className={`${card.logoW} h-auto object-contain relative z-[1]`}
+                        style={{ maxHeight: card.logoMaxH }}
                         onError={() => setImageErrors((prev) => new Set(prev).add(i))}
                       />
                     ) : (
