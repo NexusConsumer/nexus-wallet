@@ -5,32 +5,30 @@ import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 
 // ── Real Tel Aviv coordinates ──
-// User location: Rothschild Blvd & Allenby
 const USER_LATLNG: [number, number] = [32.0636, 34.7721]
-// Destination: Dizengoff Center area
 const DEST_LATLNG: [number, number] = [32.0753, 34.7748]
 
-// Route that follows real streets: Rothschild → Allenby → King George → Dizengoff
+// Route: Rothschild → Allenby → King George → Dizengoff
 const ROUTE_COORDS: [number, number][] = [
-  [32.0636, 34.7721], // Start: Rothschild & Allenby
-  [32.0648, 34.7710], // Allenby heading NW
-  [32.0659, 34.7700], // Allenby & Bialik
-  [32.0671, 34.7693], // Allenby continues
-  [32.0682, 34.7688], // Near Magen David Square
-  [32.0693, 34.7705], // King George heading north
-  [32.0708, 34.7718], // King George continues
-  [32.0722, 34.7730], // King George & Ben Zion
-  [32.0735, 34.7740], // Approaching Dizengoff
-  [32.0753, 34.7748], // Destination: Dizengoff Center
+  [32.0636, 34.7721],
+  [32.0648, 34.7710],
+  [32.0659, 34.7700],
+  [32.0671, 34.7693],
+  [32.0682, 34.7688],
+  [32.0693, 34.7705],
+  [32.0708, 34.7718],
+  [32.0722, 34.7730],
+  [32.0735, 34.7740],
+  [32.0753, 34.7748],
 ]
 
-// Brand offers — offset to the SIDES of the route, not on it
+// Brand offers — closer to center of map so bubbles never clip
 const routeOffers = [
-  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", latlng: [32.0650, 34.7718] as [number, number] },
-  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", latlng: [32.0674, 34.7675] as [number, number] },
-  { brand: "Rami Levy",      logo: "/brands/rami-levy.png",      discount: "10%", latlng: [32.0698, 34.7725] as [number, number] },
-  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", latlng: [32.0720, 34.7718] as [number, number] },
-  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", latlng: [32.0745, 34.7760] as [number, number] },
+  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", latlng: [32.0648, 34.7728] as [number, number] },
+  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", latlng: [32.0672, 34.7710] as [number, number] },
+  { brand: "Carrefour",      logo: "/brands/carrefour.png",      discount: "10%", latlng: [32.0697, 34.7695] as [number, number] },
+  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", latlng: [32.0718, 34.7720] as [number, number] },
+  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", latlng: [32.0740, 34.7735] as [number, number] },
 ]
 
 // Preload logos
@@ -76,25 +74,43 @@ function createOfferIcon(logo: string, discount: string) {
   })
 }
 
-// ── Animated route component — draws the polyline segment by segment ──
+// ── Animated dashed route using stroke-dashoffset on SVG ──
 function AnimatedRoute({ coords, show }: { coords: [number, number][]; show: boolean }) {
-  const [visibleCount, setVisibleCount] = useState(0)
+  const polyRef = useRef<L.Polyline | null>(null)
 
   useEffect(() => {
-    if (!show) { setVisibleCount(0); return }
-    setVisibleCount(0)
-    const timers: ReturnType<typeof setTimeout>[] = []
-    coords.forEach((_, i) => {
-      timers.push(setTimeout(() => setVisibleCount(i + 1), i * 120))
-    })
-    return () => timers.forEach(clearTimeout)
-  }, [show, coords])
+    if (!polyRef.current) return
+    const el = polyRef.current.getElement()
+    if (!el) return
 
-  if (visibleCount < 2) return null
+    if (show) {
+      // Get total path length
+      const pathEl = el.querySelector("path") as SVGPathElement | null
+      if (!pathEl) return
+      const totalLength = pathEl.getTotalLength()
+
+      // Set up: dashed line, fully hidden via dashoffset
+      pathEl.style.strokeDasharray = `8 6`
+      pathEl.style.strokeDashoffset = `${totalLength}`
+      pathEl.style.transition = "none"
+
+      // Force reflow then animate
+      pathEl.getBoundingClientRect()
+      pathEl.style.transition = "stroke-dashoffset 1.4s ease-out"
+      pathEl.style.strokeDashoffset = "0"
+    } else {
+      const pathEl = el?.querySelector("path") as SVGPathElement | null
+      if (pathEl) {
+        pathEl.style.transition = "none"
+        pathEl.style.strokeDashoffset = `${pathEl.getTotalLength()}`
+      }
+    }
+  }, [show])
 
   return (
     <Polyline
-      positions={coords.slice(0, visibleCount)}
+      ref={polyRef}
+      positions={coords}
       pathOptions={{
         color: "#635bff",
         weight: 4,
@@ -135,10 +151,10 @@ export default function NearbyMapPage() {
     setPhase(0)
     setVisibleBubbles(0)
 
-    t.push(setTimeout(() => setPhase(1), 400))    // user dot
-    t.push(setTimeout(() => setPhase(2), 1400))   // dest pin
-    t.push(setTimeout(() => setPhase(3), 2200))   // route draws
-    t.push(setTimeout(() => setPhase(4), 3600))   // bubbles start
+    t.push(setTimeout(() => setPhase(1), 400))
+    t.push(setTimeout(() => setPhase(2), 1400))
+    t.push(setTimeout(() => setPhase(3), 2200))
+    t.push(setTimeout(() => setPhase(4), 3600))
 
     routeOffers.forEach((_, i) => {
       t.push(setTimeout(() => setVisibleBubbles(i + 1), 3600 + i * 500))
@@ -155,7 +171,6 @@ export default function NearbyMapPage() {
     return () => { t.forEach(clearTimeout); t.length = 0 }
   }, [loopKey])
 
-  // Center the map between user and destination
   const centerLat = (USER_LATLNG[0] + DEST_LATLNG[0]) / 2
   const centerLng = (USER_LATLNG[1] + DEST_LATLNG[1]) / 2
 
@@ -193,17 +208,11 @@ export default function NearbyMapPage() {
         transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
         className="relative z-10"
       >
-        {/* Glow behind phone */}
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[90px] z-0"
-          style={{
-            width: 280, height: 420,
-            background: "rgba(99, 91, 255, 0.12)",
-            filter: "blur(50px)",
-          }}
+          style={{ width: 280, height: 420, background: "rgba(99,91,255,0.12)", filter: "blur(50px)" }}
         />
 
-        {/* Phone frame */}
         <div
           className="relative z-10"
           style={{
@@ -216,17 +225,12 @@ export default function NearbyMapPage() {
             boxShadow: "0 30px 80px rgba(7,10,20,0.35)",
           }}
         >
-          {/* Inner frame highlight */}
           <div
             className="absolute pointer-events-none"
             style={{ inset: 7, borderRadius: 29, border: "1px solid rgba(255,255,255,0.08)" }}
           />
 
-          {/* Screen */}
-          <div
-            className="w-full h-full relative overflow-hidden"
-            style={{ borderRadius: 28 }}
-          >
+          <div className="w-full h-full relative overflow-hidden" style={{ borderRadius: 28 }}>
             {/* Notch */}
             <div
               className="absolute top-2 left-1/2 -translate-x-1/2 z-30"
@@ -239,7 +243,7 @@ export default function NearbyMapPage() {
               }}
             />
 
-            {/* Real Leaflet map */}
+            {/* Leaflet map */}
             <div className="absolute inset-0 z-0">
               <MapContainer
                 key={loopKey}
@@ -256,17 +260,10 @@ export default function NearbyMapPage() {
                   maxZoom={20}
                 />
 
-                {/* User marker */}
-                {phase >= 1 && (
-                  <Marker position={USER_LATLNG} icon={userIcon} />
-                )}
+                {phase >= 1 && <Marker position={USER_LATLNG} icon={userIcon} />}
+                {phase >= 2 && <Marker position={DEST_LATLNG} icon={destIcon} />}
 
-                {/* Destination pin */}
-                {phase >= 2 && (
-                  <Marker position={DEST_LATLNG} icon={destIcon} />
-                )}
-
-                {/* Animated route */}
+                {/* Dashed route with smooth continuous stroke-dashoffset animation */}
                 <AnimatedRoute coords={ROUTE_COORDS} show={phase >= 3} />
 
                 {/* Brand offer bubbles */}
@@ -280,7 +277,7 @@ export default function NearbyMapPage() {
               </MapContainer>
             </div>
 
-            {/* Bottom caption inside phone */}
+            {/* Bottom caption */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -300,13 +297,11 @@ export default function NearbyMapPage() {
         </div>
       </motion.div>
 
-      {/* Keyframe animations for Leaflet markers */}
       <style>{`
         @keyframes nearbyPulse {
           0% { transform: scale(1); opacity: 0.7; }
           100% { transform: scale(3); opacity: 0; }
         }
-        /* Hide Leaflet default chrome inside the phone */
         .leaflet-control-attribution { display: none !important; }
       `}</style>
     </div>
