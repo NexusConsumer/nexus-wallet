@@ -24,13 +24,13 @@ const ROUTE_COORDS: [number, number][] = [
   [32.0753, 34.7748], // Destination: Dizengoff Center
 ]
 
-// Brand offers with real locations along the route
+// Brand offers — offset to the SIDES of the route, not on it
 const routeOffers = [
-  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", latlng: [32.0655, 34.7703] as [number, number] },
-  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", latlng: [32.0678, 34.7690] as [number, number] },
-  { brand: "Rami Levy",      logo: "/brands/rami-levy.png",      discount: "10%", latlng: [32.0700, 34.7710] as [number, number] },
-  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", latlng: [32.0725, 34.7733] as [number, number] },
-  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", latlng: [32.0748, 34.7745] as [number, number] },
+  { brand: "Golf & Co",      logo: "/brands/golf.png",           discount: "20%", latlng: [32.0650, 34.7718] as [number, number] },
+  { brand: "American Eagle", logo: "/brands/american-eagle.png", discount: "15%", latlng: [32.0674, 34.7675] as [number, number] },
+  { brand: "Rami Levy",      logo: "/brands/rami-levy.png",      discount: "10%", latlng: [32.0698, 34.7725] as [number, number] },
+  { brand: "Mango",          logo: "/brands/mango.png",          discount: "25%", latlng: [32.0720, 34.7718] as [number, number] },
+  { brand: "Samsung",        logo: "/brands/samsung.png",        discount: "30%", latlng: [32.0745, 34.7760] as [number, number] },
 ]
 
 // Preload logos
@@ -99,7 +99,6 @@ function AnimatedRoute({ coords, show }: { coords: [number, number][]; show: boo
         color: "#635bff",
         weight: 4,
         opacity: 0.85,
-        dashArray: "8 6",
         lineCap: "round",
         lineJoin: "round",
       }}
@@ -245,7 +244,7 @@ export default function NearbyMapPage() {
               <MapContainer
                 key={loopKey}
                 center={[centerLat, centerLng]}
-                zoom={14}
+                zoom={15}
                 className="w-full h-full"
                 zoomControl={false}
                 attributionControl={false}
