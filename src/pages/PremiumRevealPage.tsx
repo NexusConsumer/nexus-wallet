@@ -3,8 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 // ── Constants ──
-const BG_COLOR = "#0A2540"
-const TRACK_INSET = "#061B2E"
+const BG_COLOR = "#0F3460"
 const CAP_SIZE = 76
 const CAP_TOP_PAD = 8
 const PILL_MIN = CAP_TOP_PAD + CAP_SIZE + 20
@@ -21,6 +20,24 @@ interface Particle {
   vy: number
   size: number
   color: string
+}
+
+/**
+ * Builds a clip-path covering the whole viewport except a track-shaped
+ * cutout at the bottom center (rounded top, straight sides and bottom).
+ */
+function buildOverlayClip(
+  vw: number, vh: number, trackW: number, trackH: number,
+): string {
+  const cx = vw / 2
+  const left = cx - trackW / 2
+  const right = cx + trackW / 2
+  const top = vh - trackH
+  const r = trackW / 2 // semicircle radius = half the track width
+
+  // Outer rect (CW) + inner cutout (CCW) with arc top
+  // The inner path: start bottom-left, go up left side, arc across top, down right side, close bottom
+  return `path(evenodd, "M0,0 L${vw},0 L${vw},${vh} L0,${vh} Z M${left},${vh} L${left},${top + r} A${r},${r} 0 0,1 ${right},${top + r} L${right},${vh} Z")`
 }
 
 export default function PremiumRevealPage() {
@@ -48,9 +65,6 @@ export default function PremiumRevealPage() {
   const sliderWidth = Math.max(Math.round(viewW * 0.25), CAP_SIZE + 16)
   const trackBaseH = Math.round(viewH / 6)
   const trackH = Math.max(trackBaseH, pillHeight + CAP_TOP_PAD)
-
-  // Half-widths for overlay positioning
-  const halfTrack = sliderWidth / 2
 
   // ── Drag handlers ──
   const handlePointerDown = useCallback(
@@ -116,13 +130,6 @@ export default function PremiumRevealPage() {
     setTimeout(() => navigate(`/${lang}`), 2500)
   }, [lang, navigate])
 
-  const pillProgress = (pillHeight - PILL_MIN) / (PILL_MAX - PILL_MIN)
-  const pillTexOpacity = Math.min(1, pillProgress * 1.5)
-
-  const overlayTransition = isDragging
-    ? "opacity 0.4s"
-    : "height 0.3s ease-out, opacity 0.4s"
-
   return (
     <div className="fixed inset-0 overflow-hidden" dir="rtl">
       {/* Layer 0 — Animated gradient background (hidden under overlay) */}
@@ -160,52 +167,14 @@ export default function PremiumRevealPage() {
         </div>
       </div>
 
-      {/* Layer 1 — Dark blue overlay (3 pieces around track cutout) */}
-      {/* Top section: full width, from top to track top edge */}
+      {/* Layer 1 — Dark blue overlay with rounded track cutout */}
       <div
-        className="absolute left-0 right-0 top-0 z-10 pointer-events-none"
+        className="absolute inset-0 z-10 pointer-events-none"
         style={{
-          height: viewH - trackH + 1,
           background: BG_COLOR,
+          clipPath: buildOverlayClip(viewW, viewH, sliderWidth, trackH),
           opacity: revealed ? 0 : 1,
-          transition: overlayTransition,
-        }}
-      />
-      {/* Bottom-left: left of track cutout */}
-      <div
-        className="absolute bottom-0 z-10 pointer-events-none"
-        style={{
-          left: 0,
-          width: `calc(50% - ${halfTrack}px)`,
-          height: trackH,
-          background: BG_COLOR,
-          opacity: revealed ? 0 : 1,
-          transition: overlayTransition,
-        }}
-      />
-      {/* Bottom-right: right of track cutout */}
-      <div
-        className="absolute bottom-0 z-10 pointer-events-none"
-        style={{
-          right: 0,
-          width: `calc(50% - ${halfTrack}px)`,
-          height: trackH,
-          background: BG_COLOR,
-          opacity: revealed ? 0 : 1,
-          transition: overlayTransition,
-        }}
-      />
-
-      {/* Track inset — darker shade inside the cutout for recessed look */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[5] pointer-events-none"
-        style={{
-          width: sliderWidth,
-          height: trackH,
-          background: TRACK_INSET,
-          boxShadow: "inset 0 4px 12px rgba(0,0,0,0.5)",
-          opacity: revealed ? 0 : 1,
-          transition: overlayTransition,
+          transition: "opacity 0.4s",
         }}
       />
 
@@ -237,7 +206,7 @@ export default function PremiumRevealPage() {
           width: sliderWidth,
           height: pillHeight,
           bottom: 0,
-          borderRadius: 0,
+          borderRadius: `${sliderWidth / 2}px ${sliderWidth / 2}px 0 0`,
           overflow: "hidden",
           cursor: revealed ? "default" : "grab",
           touchAction: "none",
@@ -248,15 +217,6 @@ export default function PremiumRevealPage() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {/* Gradient fill visible through track (increases with drag) */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(180deg, rgba(216,129,244,0.5), rgba(128,222,234,0.3), rgba(244,143,177,0.4))",
-            opacity: pillTexOpacity,
-          }}
-        />
-
         {/* Cap circle */}
         <div
           className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
