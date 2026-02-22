@@ -20,6 +20,12 @@ import InsightsPage from '../pages/InsightsPage';
 import StoriesPage from '../pages/StoriesPage';
 import PremiumRevealPage from '../pages/PremiumRevealPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import WelcomeBackPage from '../pages/auth-flow/WelcomeBackPage';
+import WelcomeNewPage from '../pages/auth-flow/WelcomeNewPage';
+import HowDidYouArrivePage from '../pages/auth-flow/HowDidYouArrivePage';
+import SelectOrgPage from '../pages/auth-flow/SelectOrgPage';
+import WelcomeOrgPage from '../pages/auth-flow/WelcomeOrgPage';
+import FlowTestPage from '../pages/auth-flow/FlowTestPage';
 
 export const router = createBrowserRouter([
   {
@@ -66,6 +72,19 @@ export const router = createBrowserRouter([
           { path: 'complete-profile', element: <RegisterProfilePage /> },
           { path: 'membership', element: <RegisterMembershipPage /> },
           { path: 'preferences', element: <RegisterPreferencesPage /> },
+        ],
+      },
+
+      // Auth Flow (outside AppLayout, full-page — like signup/register)
+      {
+        path: 'auth-flow',
+        children: [
+          { path: 'welcome-back', element: <WelcomeBackPage /> },
+          { path: 'welcome-new', element: <WelcomeNewPage /> },
+          { path: 'how-did-you-arrive', element: <HowDidYouArrivePage /> },
+          { path: 'select-org', element: <SelectOrgPage /> },
+          { path: 'welcome-org', element: <WelcomeOrgPage /> },
+          { path: 'test', element: <FlowTestPage /> },
         ],
       },
 

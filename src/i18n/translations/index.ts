@@ -6,6 +6,7 @@ import { activityTranslations } from './activity';
 import { profileTranslations } from './profile';
 import { authTranslations } from './auth';
 import { registrationTranslations } from './registration';
+import { authFlowTranslations } from './authFlow';
 import type { Translations } from '../types';
 
 const navTranslations = {
@@ -36,6 +37,7 @@ export const translations: Translations = {
     nav: navTranslations.en,
     auth: authTranslations.en,
     registration: registrationTranslations.en,
+    authFlow: authFlowTranslations.en,
   },
   he: {
     common: commonTranslations.he,
@@ -47,5 +49,6 @@ export const translations: Translations = {
     nav: navTranslations.he,
     auth: authTranslations.he,
     registration: registrationTranslations.he,
+    authFlow: authFlowTranslations.he,
   },
 };

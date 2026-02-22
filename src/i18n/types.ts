@@ -249,6 +249,41 @@ export interface TranslationKeys {
     googleGreeting: string;
     orgMemberGreeting: string;
   };
+  authFlow: {
+    // Flow 1 — Welcome Back
+    welcomeBackTitle: string;
+    welcomeBackSubtitle: string;
+    welcomeBackOrg: string;
+    redirecting: string;
+    // Flow 2 — Welcome New
+    welcomeNewTitle: string;
+    welcomeNewSubtitle: string;
+    welcomeNewBullet1: string;
+    welcomeNewBullet2: string;
+    welcomeNewBullet3: string;
+    welcomeNewCta: string;
+    welcomeNewAlreadyMember: string;
+    welcomeNewSwitchAccount: string;
+    // Flow 2 — How Did You Arrive
+    howArriveTitle: string;
+    howArriveSubtitle: string;
+    howArriveDirectTitle: string;
+    howArriveDirectDesc: string;
+    howArriveOrgTitle: string;
+    howArriveOrgDesc: string;
+    // Flow 2 — Select Org
+    selectOrgTitle: string;
+    selectOrgSearch: string;
+    selectOrgNotFound: string;
+    // Flow 3 — Welcome Org
+    welcomeOrgTitle: string;
+    welcomeOrgSubtitle: string;
+    welcomeOrgBullet1: string;
+    welcomeOrgBullet2: string;
+    welcomeOrgBullet3: string;
+    welcomeOrgCta: string;
+    welcomeOrgSkip: string;
+  };
 }
 
 export interface Translations {
