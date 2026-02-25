@@ -135,7 +135,7 @@ export default function RegisterMembershipPage() {
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-px"
           >
-            <img src={`/nexus-logo-animated-black.gif?t=${Date.now()}`} alt="Nexus" className="h-5" />
+            <img src="/nexus-logo-black.png" alt="Nexus" className="h-5" loading="lazy" />
             <span className="text-[9px] text-black">Powered by</span>
           </a>
         </div>

@@ -592,7 +592,7 @@ export default function SignupPage() {
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-px mt-6 mb-2"
               >
-                <img src={`/nexus-logo-animated-black.gif?t=${Date.now()}`} alt="Nexus" className="h-6" />
+                <img src="/nexus-logo-black.png" alt="Nexus" className="h-6" loading="lazy" />
                 <span className="text-[9px] text-black">Powered by</span>
               </a>
             </div>
